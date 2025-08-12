@@ -1,0 +1,9 @@
+SmalltalkCISpec {
+  #loading : [
+    SCIMetacelloLoadSpec {
+      #baseline : 'AIPharoCopilot',
+      #directory : 'src',
+      #platforms : [ #pharo ]
+    }
+  ]
+}
