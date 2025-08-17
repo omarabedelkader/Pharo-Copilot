@@ -1,3 +1,7 @@
+"
+Completion engine that retrieves suggestions from the Pharo Copilot service.
+
+"
 Class {
 	#name : 'CoCompletionEnignePharoCopilot',
 	#superclass : 'CoCompletionEngine',

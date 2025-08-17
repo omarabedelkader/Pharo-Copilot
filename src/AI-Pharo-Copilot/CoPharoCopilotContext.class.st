@@ -1,3 +1,7 @@
+"
+Specialized completion context tailored for the Pharo Copilot engine.
+
+"
 Class {
 	#name : 'CoPharoCopilotContext',
 	#superclass : 'CoCompletionContext',

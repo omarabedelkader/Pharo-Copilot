@@ -1,3 +1,6 @@
+"
+Represents a single completion suggestion returned by Pharo Copilot.
+"
 Class {
 	#name : 'CoCopilotEntry',
 	#superclass : 'Object',
