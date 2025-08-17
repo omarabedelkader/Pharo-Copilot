@@ -20,8 +20,7 @@ CoCopilotEntry class >> contents: aString [
 { #category : 'accessing' }
 CoCopilotEntry >> activateOn: aCoCompletionContext [
 
-  "Insert the suggestion (replace current token)"
-  aCoCompletionContext replaceTokenInEditorWith: text
+	aCoCompletionContext replaceTokenInEditorWith: text
 ]
 
 { #category : 'accessing' }
@@ -29,7 +28,7 @@ CoCopilotEntry >> contents [
   ^ text
 ]
 
-{ #category : 'accessing' }
+{ #category : 'displaying' }
 CoCopilotEntry >> displayString [
 
   ^ text size > 120

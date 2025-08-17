@@ -43,6 +43,6 @@ CoPharoCopilotResultSetBuilder >> buildCompletion [
 
 { #category : 'initialization' }
 CoPharoCopilotResultSetBuilder >> initializeOnContext: aSystemCompletionContext [ 
-    "Store the passed-in context so we can access source, position, etc."
+
     completionContext := aSystemCompletionContext
 ]
