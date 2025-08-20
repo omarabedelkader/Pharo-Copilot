@@ -164,6 +164,7 @@ OllamaAPI >> query: aTextQuery [
 	znClient host: self host.
 	znClient port: self port.
 	znClient path: 'api/generate'.
+	znClient timeout: 120.
 	paramDic := Dictionary new.
 	paramDic at: #model put: self model fullName.
 	paramDic at: #prompt put: (self buildQuery: aTextQuery).
@@ -176,15 +177,15 @@ OllamaAPI >> query: aTextQuery [
 
 	self stream
 		ifTrue: [
-			znClient streaming: true.
-			^ znClient post ]
+				znClient streaming: true.
+				^ znClient post ]
 		ifFalse: [
-			| reader | 
-			znClient forJsonREST.
-			reader := ZnUtils defaultJSONReader.
-			znClient contentReader: [ :entity |
-				reader fromString: entity contents ].
-			^ znClient post at: #response ]
+				| reader |
+				znClient forJsonREST.
+				reader := ZnUtils defaultJSONReader.
+				znClient contentReader: [ :entity |
+					reader fromString: entity contents ].
+				^ znClient post at: #response ]
 ]
 
 { #category : 'accessing' }
