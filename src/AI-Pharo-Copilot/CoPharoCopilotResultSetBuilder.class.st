@@ -17,23 +17,19 @@ CoPharoCopilotResultSetBuilder class >> initializeOnContext: aSystemCompletionCo
 ]
 
 { #category : 'API - building' }
-CoPharoCopilotResultSetBuilder >> buildCompletion [
+CoPharoCopilotResultSetBuilder >> buildCompletion [ 
 
-  | textUpToCaret api response content entries fetcher |
+  | textUpToCaret client response content entries fetcher |
   textUpToCaret := completionContext source copyFrom: 1 to: completionContext position.
-  api := OllamaAPI new.
-  response := api query: textUpToCaret.  "Likely a String"
 
-  "Normalize to the text we want to show"
-  content := (response isKindOf: Dictionary)
-               ifTrue:  [ response at: #content ifAbsent: [''] ]
-               ifFalse: [ response asString ].
+  client := OllamaClient new.
+  response := client generate: textUpToCaret.
+
+  content := response asString.
 
   Transcript
     show: 'Copilot raw response: ';
     show: content; cr.
-
-
 
   entries := content isEmpty
                ifTrue:  [ #() ]

@@ -94,7 +94,6 @@ OAHttpTransport >> port: anObject [
 
 { #category : 'initialization' }
 OAHttpTransport >> postJsonAt: aPath body: aDictionary [ 
-
   | cl |
   cl := ZnClient new.
   cl accept: ZnMimeType applicationJson.
@@ -102,5 +101,6 @@ OAHttpTransport >> postJsonAt: aPath body: aDictionary [
   cl host: host; port: port; path: aPath.
   cl forJsonREST.
   cl contentReader: [:entity | jsonReader fromString: entity contents ].
-  ^ cl post: aDictionary
+  cl contents: aDictionary.
+  ^ cl post.
 ]

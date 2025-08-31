@@ -13,10 +13,18 @@ Class {
 }
 
 { #category : 'settings' }
+CopilotSettings class >> availableModelNames [
+
+  | models |
+  models := (OllamaClient new listModels) at: 'models' ifAbsent: [ #() ].
+  ^ models collect: [:m | m at: 'name']
+]
+
+{ #category : 'settings' }
 CopilotSettings class >> availableProviders [
 
     "Adapt to your backends"
-    ^ { #ollama. #openai. #local }.
+    ^ { #ollama}.
 ]
 
 { #category : 'accessing' }
@@ -58,7 +66,7 @@ CopilotSettings class >> maxSuggestions: anInteger [
 { #category : 'accessing' }
 CopilotSettings class >> modelName [
 
-    ^ ModelName ifNil: [ ModelName := 'qwen2.5-coder:7b' ].
+    ^ ModelName
 ]
 
 { #category : 'accessing' }
@@ -87,12 +95,13 @@ CopilotSettings class >> settingsOn: aBuilder [
                 setSelector: #copilotProvider:;
                 domainValues: self availableProviders.
 
-            (aBuilder setting: #modelName)
-                label: 'Model';
-                target: self;
-                getSelector: #modelName;
-                setSelector: #modelName:;
-                default: self modelName.
+(aBuilder pickOne: #modelName)
+    label: 'Model';
+    target: self;
+    getSelector: #modelName;
+    setSelector: #modelName:;
+    default: self modelName;
+    domainValues: self availableModelNames.
 
             (aBuilder setting: #maxSuggestions)
                 label: 'Maximum suggestions';
