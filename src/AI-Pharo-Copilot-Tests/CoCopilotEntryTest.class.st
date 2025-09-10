@@ -6,6 +6,22 @@ Class {
 }
 
 { #category : 'tests' }
+CoCopilotEntryTest >> testActivateOnReplacesToken [
+    | entry context |
+    entry := CoCopilotEntry contents: 'foo'.
+    context := CoCopilotEntryTestContext new.
+    entry activateOn: context.
+    self assert: context replacedToken equals: 'foo'.
+]
+
+{ #category : 'tests' }
+CoCopilotEntryTest >> testContentsAccessor [
+    | entry |
+    entry := CoCopilotEntry contents: 'foo'.
+    self assert: entry contents equals: 'foo'.
+]
+
+{ #category : 'tests' }
 CoCopilotEntryTest >> testDisplayStringReturnsFullTextWhenShort [
 
     | text entry |
