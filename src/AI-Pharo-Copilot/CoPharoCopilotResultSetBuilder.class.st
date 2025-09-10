@@ -42,7 +42,6 @@ fetcher := CoCollectionFetcher onCollection: #(  ).
 CoPharoCopilotResultSetBuilder >> cleanedContentFrom: aString [ 
     | start end delimiter idx segment |
 
-self halt.
     start := aString indexOfSubCollection: '```' startingAt: 1 ifAbsent: [ 0 ].
     start > 0 ifTrue: [
         end := aString indexOfSubCollection: '```' startingAt: start + 3 ifAbsent: [ aString size + 1 ].
