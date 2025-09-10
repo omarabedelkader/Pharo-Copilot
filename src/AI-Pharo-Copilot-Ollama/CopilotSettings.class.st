@@ -18,9 +18,7 @@ Class {
 { #category : 'settings' }
 CopilotSettings class >> availableModelNames [
 
-  | models |
-  models := (OllamaClient new listModels) at: 'models' ifAbsent: [ #() ].
-  ^ models collect: [:m | m at: 'name']
+^ OModelRegistry current domainValuesForSettings
 ]
 
 { #category : 'settings' }
@@ -69,7 +67,7 @@ CopilotSettings class >> maxSuggestions: anInteger [
 { #category : 'accessing' }
 CopilotSettings class >> modelName [
 
-    ^ ModelName
+	^ ModelName ifNil: [ ModelName := OllamaClient defaultModelFullName ]
 ]
 
 { #category : 'accessing' }
