@@ -20,6 +20,17 @@ OllamaClientTest >> testGenerateForPrefixSuffixBuildsPrompt [
 ]
 
 { #category : 'tests' }
+OllamaClientTest >> testListModelsUsesApiTags [
+
+    | client mock |
+    client := OllamaClient new.
+    mock := OAHttpTransportMock new.
+    client instVarNamed: 'transport' put: mock.
+    client listModels.
+    self assert: mock lastPath equals: 'api/tags'.
+]
+
+{ #category : 'tests' }
 OllamaClientTest >> testNormalizeResponsePrefersResponse [
 
     | client dict result |

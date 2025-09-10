@@ -22,6 +22,15 @@ CoCopilotEntryTest >> testContentsAccessor [
 ]
 
 { #category : 'tests' }
+CoCopilotEntryTest >> testDisplayStringExactly120Characters [
+
+    | text entry |
+    text := String new: 120 withAll: $a.
+    entry := CoCopilotEntry contents: text.
+    self assert: entry displayString equals: text.
+]
+
+{ #category : 'tests' }
 CoCopilotEntryTest >> testDisplayStringReturnsFullTextWhenShort [
 
     | text entry |

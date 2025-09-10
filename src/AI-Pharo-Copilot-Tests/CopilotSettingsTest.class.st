@@ -14,6 +14,11 @@ CopilotSettingsTest >> testAvailableModelName [
 ]
 
 { #category : 'tests' }
+CopilotSettingsTest >> testAvailableProvidersIncludesOllama [
+    self assert: (CopilotSettings availableProviders includes: #ollama).
+]
+
+{ #category : 'tests' }
 CopilotSettingsTest >> testCopilotEnabledAccessor [
     | old |
     old := CopilotSettings copilotEnabled.

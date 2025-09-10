@@ -5,9 +5,15 @@ Class {
 		'lastPath',
 		'lastBody'
 	],
-	#category : 'AI-Pharo-Copilot-Ollama',
-	#package : 'AI-Pharo-Copilot-Ollama'
+	#category : 'AI-Pharo-Copilot-Tests',
+	#package : 'AI-Pharo-Copilot-Tests'
 }
+
+{ #category : 'accessing' }
+OAHttpTransportMock >> getJsonAt: aPath [
+    lastPath := aPath.
+    ^ Dictionary new
+]
 
 { #category : 'accessing' }
 OAHttpTransportMock >> lastBody [
