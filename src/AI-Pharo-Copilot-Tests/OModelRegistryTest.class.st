@@ -17,6 +17,15 @@ OModelRegistryTest >> testDomainValuesForSettings [
 ]
 
 { #category : 'tests' }
+OModelRegistryTest >> testDomainValuesForSettingsReturnAssociations [
+
+    | registry domain |
+    registry := OModelRegistry build.
+    domain := registry domainValuesForSettings.
+    self assert: (domain allSatisfy: [ :assoc | assoc isKindOf: Association ]).
+]
+
+{ #category : 'tests' }
 OModelRegistryTest >> testSpecLookupByFullNameAndLabel [
 
     | registry spec |
@@ -25,4 +34,12 @@ OModelRegistryTest >> testSpecLookupByFullNameAndLabel [
     self assert: spec notNil.
     self assert: spec label equals: 'Code Llama 7B'.
     self assert: (registry specByLabel: 'Code Llama 7B') == spec.
+]
+
+{ #category : 'tests' }
+OModelRegistryTest >> testSpecLookupByFullNameMissing [
+
+    | registry |
+    registry := OModelRegistry build.
+    self assert: (registry specByFullName: 'unknown') isNil.
 ]

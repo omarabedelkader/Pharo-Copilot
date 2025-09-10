@@ -38,3 +38,12 @@ CoCopilotEntryTest >> testDisplayStringTruncatesLongText [
     entry := CoCopilotEntry contents: longText.
     self assert: entry displayString equals: (longText copyFrom: 1 to: 117), '…'.
 ]
+
+{ #category : 'tests' }
+CoCopilotEntryTest >> testTextSetterUpdatesContents [
+
+    | entry |
+    entry := CoCopilotEntry new.
+    entry text: 'bar'.
+    self assert: entry contents equals: 'bar'.
+]

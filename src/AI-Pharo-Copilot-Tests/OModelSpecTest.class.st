@@ -14,6 +14,15 @@ OModelSpecTest >> testFamilyAccessor [
 ]
 
 { #category : 'tests' }
+OModelSpecTest >> testFamilySetter [
+
+    | spec |
+    spec := OModelSpec family: 'abc' tag: nil label: 'ABC'.
+    spec family: 'xyz'.
+    self assert: spec family equals: 'xyz'.
+]
+
+{ #category : 'tests' }
 OModelSpecTest >> testFullNameWithTag [ 
 
     | spec |
@@ -35,4 +44,21 @@ OModelSpecTest >> testLabelAccessor [
     | spec |
     spec := OModelSpec family: 'abc' tag: nil label: 'ABC'.
     self assert: spec label equals: 'ABC'.
+]
+
+{ #category : 'tests' }
+OModelSpecTest >> testLabelSetter [
+
+    | spec |
+    spec := OModelSpec family: 'abc' tag: nil label: 'ABC'.
+    spec label: 'XYZ'.
+    self assert: spec label equals: 'XYZ'.
+]
+
+{ #category : 'tests' }
+OModelSpecTest >> testTagAccessor [
+
+    | spec |
+    spec := OModelSpec family: 'abc' tag: 'def' label: 'ABC'.
+    self assert: spec tag equals: 'def'.
 ]

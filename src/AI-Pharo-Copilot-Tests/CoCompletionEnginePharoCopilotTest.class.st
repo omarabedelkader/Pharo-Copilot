@@ -6,6 +6,15 @@ Class {
 }
 
 { #category : 'tests' }
+CoCompletionEnginePharoCopilotTest >> testCompletionBuilderHasNilContext [
+
+    | engine builder |
+    engine := CoCompletionEnginePharoCopilot new.
+    builder := engine completionBuilder.
+    self assert: builder completionContext isNil.
+]
+
+{ #category : 'tests' }
 CoCompletionEnginePharoCopilotTest >> testCompletionBuilderIsCoPharoCopilotResultSetBuilder [
 
     | engine builder |
@@ -22,4 +31,15 @@ CoCompletionEnginePharoCopilotTest >> testCompletionBuilderMemoization [
 	firstBuilder := engine completionBuilder.
 	secondBuilder := engine completionBuilder.
 	self assert: firstBuilder identicalTo: secondBuilder
+]
+
+{ #category : 'tests' }
+CoCompletionEnginePharoCopilotTest >> testDifferentEnginesHaveDifferentBuilders [
+
+    | engine1 engine2 builder1 builder2 |
+    engine1 := CoCompletionEnginePharoCopilot new.
+    engine2 := CoCompletionEnginePharoCopilot new.
+    builder1 := engine1 completionBuilder.
+    builder2 := engine2 completionBuilder.
+    self deny: builder1 identicalTo: builder2.
 ]

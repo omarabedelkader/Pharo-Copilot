@@ -6,6 +6,15 @@ Class {
 }
 
 { #category : 'tests' }
+OModelTest >> testFullNameUpdatesWhenTagSet [
+
+    | model |
+    model := OLlamaModel new.
+    model tag: 'foo'.
+    self assert: model fullName equals: 'llama3:foo'.
+]
+
+{ #category : 'tests' }
 OModelTest >> testFullNameWithTag [ 
 
     | model |
@@ -19,6 +28,15 @@ OModelTest >> testFullNameWithoutTag [
     | model |
     model := OLlamaModel new.
     self assert: model fullName equals: 'llama3'.
+]
+
+{ #category : 'tests' }
+OModelTest >> testFullNameWithoutTagAfterClearing [
+
+    | model |
+    model := OCodeLlamaModel b7.
+    model tag: nil.
+    self assert: model fullName equals: 'codellama'.
 ]
 
 { #category : 'tests' }
