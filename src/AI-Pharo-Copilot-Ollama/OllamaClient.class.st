@@ -71,14 +71,27 @@ OllamaClient >> listModels [
 ]
 
 { #category : 'private' }
-OllamaClient >> normalizeResponse: resp [
-
+OllamaClient >> normalizeResponse: resp [ 
   "If streaming=false, Ollama returns a dict; prefer #response or #content."
+  
+  "Handle case where resp might be a string representation of JSON"
+  resp isString ifTrue: [
+    [ | parsed |
+      parsed := STONJSON fromString: resp.
+      (parsed isKindOf: Dictionary) ifTrue: [
+        ^ parsed at: #response ifAbsent: [
+          parsed at: 'response' ifAbsent: [
+            parsed at: #content ifAbsent: [
+              parsed at: 'content' ifAbsent: [ resp ] ] ] ] ].
+    ] on: Error do: [ "If parsing fails, return as is" ].
+    ^ resp ].
+  
   (resp isKindOf: Dictionary) ifTrue: [
-    ^ (resp at: #response ifAbsent: [
-                resp at: 'response' ifAbsent: [
-            resp at: #content ifAbsent: [
-                resp at: 'content' ifAbsent: [ resp asString ] ] ] ]) ].
+    ^ resp at: #response ifAbsent: [
+        resp at: 'response' ifAbsent: [
+          resp at: #content ifAbsent: [
+            resp at: 'content' ifAbsent: [ resp asString ] ] ] ] ].
+            
   ^ resp asString
 ]
 

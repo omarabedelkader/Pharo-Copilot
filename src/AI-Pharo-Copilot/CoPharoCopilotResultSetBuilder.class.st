@@ -19,23 +19,29 @@ CoPharoCopilotResultSetBuilder class >> initializeOnContext: aSystemCompletionCo
 { #category : 'API - building' }
 CoPharoCopilotResultSetBuilder >> buildCompletion [
 
-| prefix suffix client response content fetcher |
-        prefix := completionContext source copyFrom: 1 to: completionContext position.
-        suffix := completionContext position < completionContext source size
-                ifTrue: [ completionContext source copyFrom: completionContext position + 1 to: completionContext source size ]
-                ifFalse: [ '' ].
+	| prefix suffix client  content fetcher rawResponse |
+	prefix := completionContext source copyFrom: 1 to: completionContext position.
+	suffix := completionContext position < completionContext source size
+		          ifTrue: [ completionContext source copyFrom: completionContext position + 1 to: completionContext source size ]
+		          ifFalse: [ '' ].
 
+	client := OllamaClient new.
+	rawResponse := client generateForPrefix: prefix suffix: suffix. "Extract just the response field if it's a JSON dictionary"
+	content := rawResponse.
+	[
+		| parsed |
+		parsed := STONJSON fromString: rawResponse asString.
+		(parsed isKindOf: Dictionary) ifTrue: [
+			content := parsed at: #response ifAbsent: [ parsed at: 'response' ifAbsent: [ rawResponse ] ] ] ]
+		on: Error
+		do: [ "If parsing fails, use original response" ].
 
-client := OllamaClient new.
-        response := client generateForPrefix: prefix suffix: suffix.
+	content := self cleanedContentFrom: content asString.
 
-content := self cleanedContentFrom: response asString.
+	content isEmpty ifFalse: [ completionContext replaceTokenInEditorWith: content ].
 
-content isEmpty ifFalse: [ completionContext replaceTokenInEditorWith: content ].
-
-
-fetcher := CoCollectionFetcher onCollection: #(  ).
-        ^ CoResultSet fetcher: fetcher
+	fetcher := CoCollectionFetcher onCollection: #(  ).
+	^ CoResultSet fetcher: fetcher
 ]
 
 { #category : 'API - building' }
