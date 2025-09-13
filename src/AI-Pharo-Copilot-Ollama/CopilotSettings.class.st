@@ -19,7 +19,7 @@ Class {
 { #category : 'settings' }
 CopilotSettings class >> availableModelNames [
 
-	^ OModelRegistry build domainValuesForSettings
+	^ OModelRegistry refresh domainValuesForSettings
 ]
 
 { #category : 'settings' }

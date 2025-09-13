@@ -26,9 +26,17 @@ OModelRegistry class >> build [
 ]
 
 { #category : 'accessing' }
-OModelRegistry class >> current [ 
+OModelRegistry class >> current [
 
-  ^ current ifNil: [ current := self build ]
+	^ current ifNil: [ self refresh ]
+]
+
+{ #category : 'accessing' }
+OModelRegistry class >> refresh [
+
+  current := self new.
+  current rebuild.
+  ^ current
 ]
 
 { #category : 'building' }

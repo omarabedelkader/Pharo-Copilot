@@ -26,6 +26,16 @@ OModelRegistryTest >> testDomainValuesForSettingsReturnAssociations [
 ]
 
 { #category : 'tests' }
+OModelRegistryTest >> testRefreshRebuildsCurrent [
+
+	| old new |
+	old := OModelRegistry current.
+	new := OModelRegistry refresh.
+	self deny: old identicalTo: new.
+	self assert: OModelRegistry current identicalTo: new
+]
+
+{ #category : 'tests' }
 OModelRegistryTest >> testSpecLookupByFullNameAndLabel [
 
 	| registry spec |
