@@ -51,17 +51,6 @@ CopilotSettingsTest >> testFimTemplateAccessor [
 ]
 
 { #category : 'tests' }
-CopilotSettingsTest >> testMaxSuggestionsAccessor [
-    | old |
-    old := CopilotSettings maxSuggestions.
-    CopilotSettings maxSuggestions: 5.
-    self assert: CopilotSettings maxSuggestions equals: 5.
-    CopilotSettings maxSuggestions: 0.
-    self assert: CopilotSettings maxSuggestions equals: 1.
-    CopilotSettings maxSuggestions: old.
-]
-
-{ #category : 'tests' }
 CopilotSettingsTest >> testModelNameAccessor [
     | old |
     old := CopilotSettings modelName.

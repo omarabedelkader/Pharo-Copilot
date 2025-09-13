@@ -8,7 +8,6 @@ Class {
 		'Enabled',
 		'Provider',
 		'ModelName',
-		'MaxSuggestions',
 		'UseEnterToAccept',
 		'FimTemplate'
 	],
@@ -65,19 +64,6 @@ CopilotSettings class >> fimTemplate: aString [
 ]
 
 { #category : 'accessing' }
-CopilotSettings class >> maxSuggestions [
-
-    ^ MaxSuggestions ifNil: [ MaxSuggestions := 3 ].
-
-]
-
-{ #category : 'accessing' }
-CopilotSettings class >> maxSuggestions: anInteger [
-
-    MaxSuggestions := anInteger max: 1.
-]
-
-{ #category : 'accessing' }
 CopilotSettings class >> modelName [
 
 	^ ModelName ifNil: [ ModelName := OllamaClient defaultModelFullName ]
@@ -117,20 +103,13 @@ CopilotSettings class >> settingsOn: aBuilder [
 					default: self modelName;
 					domainValues: self availableModelNames.
 
-				(aBuilder setting: #maxSuggestions)
-					label: 'Maximum suggestions';
-					target: self;
-					getSelector: #maxSuggestions;
-					setSelector: #maxSuggestions:;
-					default: self maxSuggestions.
-
 				(aBuilder setting: #fimTemplate)
 					label: 'FIM template';
 					target: self;
 					getSelector: #fimTemplate;
 					setSelector: #fimTemplate:;
 					default: self fimTemplate.
-					
+
 				(aBuilder setting: #useEnterToAccept)
 					label: 'Use ENTER to accept a suggestion';
 					target: self;
