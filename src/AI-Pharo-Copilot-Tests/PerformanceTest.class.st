@@ -35,15 +35,17 @@ PerformanceTest >> testContextCreationPerformance [
 { #category : 'tests' }
 PerformanceTest >> testEntryCreationPerformance [
 	| time entries |
-	entries := OrderedCollection new.
-	
+	"Preallocate so we measure entry creation more than collection growth"
+	entries := OrderedCollection new: 1000.
+
 	time := Time millisecondsToRun: [
-		1000 timesRepeat: [ :i |
+		1 to: 1000 do: [:i |
 			entries add: (CoCopilotEntry contents: 'content', i asString) ] ].
-	
+
 	"Should create entries quickly (less than 50ms for 1000)"
 	self assert: time < 50.
-	self assert: entries size equals: 1000
+	self assert: entries size equals: 1000.
+
 ]
 
 { #category : 'tests' }
@@ -66,13 +68,13 @@ PerformanceTest >> testSuggestionEvaluatorPerformance [
 	| evaluator time context |
 	evaluator := CoSuggestionEvaluator new.
 	context := CoPharoCopilotContext new.
-	
+
 	time := Time millisecondsToRun: [
-		100 timesRepeat: [ :i |
+		1 to: 100 do: [ :i |
 			| entry |
-			entry := CoCopilotEntry contents: 'suggestion', i asString.
+			entry := CoCopilotEntry contents: ('suggestion', i asString).
 			evaluator recordSuggestionAccepted: entry context: context ] ].
-	
-	"Should record suggestions quickly (less than 100ms for 100)"
+
 	self assert: time < 100
+
 ]
