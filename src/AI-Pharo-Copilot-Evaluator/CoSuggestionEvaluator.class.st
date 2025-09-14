@@ -70,17 +70,24 @@ CoSuggestionEvaluator >> announceEvaluation: anEvaluationEntry [
 ]
 
 { #category : 'initialization' }
+CoSuggestionEvaluator >> conditionSelectors [
+	^ #(' ifTrue:' ' ifFalse:' ' ifNil:' ' ifNotNil:' ' ifEmpty:' ' ifNotEmpty:' ' ifPresent:' ' ifAbsent:').
+
+]
+
+{ #category : 'initialization' }
 CoSuggestionEvaluator >> determineContextType: aContext [
-	| source |
-	source := aContext source.
-	
-	(source includesSubstring: 'Class {') ifTrue: [ ^ #classDefinition ].
-	(source includesSubstring: '{ #category') ifTrue: [ ^ #method ].
-	(source includesSubstring: 'ifTrue:') ifTrue: [ ^ #conditional ].
-	(source includesSubstring: 'do:') ifTrue: [ ^ #iteration ].
-	(source includesSubstring: ':=') ifTrue: [ ^ #assignment ].
-	(source includesSubstring: '^') ifTrue: [ ^ #return ].
-	
+	| src |
+	src := (aContext source ifNil: [ '' ]) asString.
+
+	(self isClassDef: src)         ifTrue: [ ^ #classDef ].
+	(self isMethodDef: src)        ifTrue: [ ^ #method ].
+	(self hasTopLevel: '^' in: src)    ifTrue: [ ^ #return ].
+	(self hasTopLevel: ':=' in: src)   ifTrue: [ ^ #assignment ].
+	(self hasAnyTopLevel: self iterationSelectors in: src)
+	                                  ifTrue: [ ^ #iteration ].
+	(self hasAnyTopLevel: self conditionSelectors in: src)
+	                                  ifTrue: [ ^ #condition ].
 	^ #other
 ]
 
@@ -117,6 +124,47 @@ CoSuggestionEvaluator >> generateReport [
 ]
 
 { #category : 'initialization' }
+CoSuggestionEvaluator >> hasAnyTopLevel: tokens in: src [
+	^ tokens anySatisfy: [ :tok | self hasTopLevel: tok in: src ].
+
+]
+
+{ #category : 'initialization' }
+CoSuggestionEvaluator >> hasTopLevel: token in: src [
+	"Find TOKEN only when not inside (), [], {}, strings (''...''), or comments (""..."" )."
+	| i n p b c br inStr inCmt quote |
+	i := 1. n := src size.
+	p := b := c := br := 0.
+	inStr := false. inCmt := false. quote := $'.
+	[ i <= n ] whileTrue: [
+		| ch |
+		ch := src at: i.
+		inCmt ifTrue: [
+			ch = $" ifTrue: [ inCmt := false ].
+		] ifFalse: [
+			inStr ifTrue: [
+				ch = quote
+					ifTrue: [
+						(i < n and: [ src at: i + 1 = quote ])
+							ifTrue: [ i := i + 1 ] "escaped quote"
+							ifFalse: [ inStr := false ] ].
+			] ifFalse: [
+				ch = $" ifTrue: [ inCmt := true ].
+				ch = quote ifTrue: [ inStr := true ].
+				ch = $( ifTrue: [ p := p + 1 ].
+				ch = $) ifTrue: [ p := p - 1 max: 0 ].
+				ch = $[ ifTrue: [ b := b + 1 ].
+				ch = $] ifTrue: [ b := b - 1 max: 0 ].
+				ch = ${ ifTrue: [ br := br + 1 ].
+				ch = $} ifTrue: [ br := br - 1 max: 0 ].
+				(p = 0 and: [ b = 0 and: [ br = 0 ]]) ifTrue: [
+					(src findString: token startingAt: i) = i ifTrue: [ ^ true ] ] ] ].
+		i := i + 1 ].
+	^ false
+
+]
+
+{ #category : 'initialization' }
 CoSuggestionEvaluator >> initialize [
 
 	super initialize.
@@ -137,6 +185,27 @@ CoSuggestionEvaluator >> initializeStats [
 		at: #modelStats put: Dictionary new;
 		at: #contextStats put: Dictionary new;
 		at: #lengthStats put: Dictionary new.
+]
+
+{ #category : 'initialization' }
+CoSuggestionEvaluator >> isClassDef: src [
+	^ (src findString: 'Class {' startingAt: 1) > 0
+	  and: [ (src findString: '#name' startingAt: 1) > 0
+	  and: [ (src findString: '#superclass' startingAt: 1) > 0 ] ].
+
+]
+
+{ #category : 'initialization' }
+CoSuggestionEvaluator >> isMethodDef: src [
+	"e.g., 'method: arg { #category : ''accessing'' } ...'"
+	^ (src findString: '{' startingAt: 1) > 0
+	  and: [ (src findString: '#category' startingAt: 1) > 0 ].
+]
+
+{ #category : 'initialization' }
+CoSuggestionEvaluator >> iterationSelectors [
+	^ #(' do:' ' collect:' ' select:' ' reject:' ' detect:' ' inject:into:'
+	    ' anySatisfy:' ' allSatisfy:' ' noneSatisfy:' ' withIndexDo:' ' keysAndValuesDo:' ' timesRepeat:').
 ]
 
 { #category : 'initialization' }

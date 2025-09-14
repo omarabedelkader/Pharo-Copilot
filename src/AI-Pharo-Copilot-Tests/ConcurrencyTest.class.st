@@ -26,16 +26,21 @@ ConcurrencyTest >> testConcurrentEvaluatorAccess [
 
 { #category : 'tests' }
 ConcurrencyTest >> testConcurrentRegistryRefresh [
-	| registries |
-	registries := OrderedCollection new.
-	
-	"Simulate multiple threads refreshing registry"
-	5 timesRepeat: [
-		registries add: OModelRegistry refresh ].
-	
-	"All should return the same current instance"
-	registries do: [ :registry |
-		self assert: registry identicalTo: OModelRegistry current ]
+
+	| n start done results |
+	n := 5.
+	start := Semaphore new.
+	done := Semaphore new.
+	results := Array new: n. "Spawn workers that all wait on the same gate."
+	1 to: n do: [ :i |
+			[
+				start wait. "release all at once"
+				results at: i put: OModelRegistry refresh.
+				done signal ] fork ]. "Let them all run concurrently."
+	n timesRepeat: [ start signal ]. "Wait for everyone to finish."
+	n timesRepeat: [ done wait ]. "All returned objects must be the very same instance."
+	self assert: (IdentitySet newFrom: results) size = 1.
+	self assert: (results first )identicalTo: OModelRegistry current.
 ]
 
 { #category : 'tests' }
@@ -54,4 +59,12 @@ ConcurrencyTest >> testConcurrentSettingsModification [
 		results do: [ :modelName |
 			self assert: modelName isString ]
 	] ensure: [ CopilotSettings modelName: oldModel ]
+]
+
+{ #category : 'tests' }
+ConcurrencyTest >> testSequentialRefreshCreatesNewInstances [
+	| registries |
+	registries := (Array new: 5) collect: [:i | OModelRegistry refresh ].
+	self deny: ((IdentitySet newFrom: registries) size = 1).
+	self assert: (registries last) identicalTo: OModelRegistry current.
 ]
