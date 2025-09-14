@@ -1,0 +1,294 @@
+"
+View current statistics:
+   CoSuggestionEvaluator default sessionStats inspect
+
+2. Generate a report:
+   CoSuggestionEvaluator default generateReport inspect
+
+3. Export to CSV:
+   CoSuggestionEvaluator default exportToCSV: 'my-evaluation.csv'
+
+4. Manually mark a suggestion as rejected:
+   suggestion markAsRejected: context reason: 'Incorrect syntax'
+
+5. Check acceptance rate:
+   CoSuggestionEvaluator default acceptanceRate
+
+6. View accepted suggestions:
+   CoSuggestionEvaluator default acceptedEntries inspect
+
+7. View rejected suggestions:
+   CoSuggestionEvaluator default rejectedEntries inspect
+"
+Class {
+	#name : 'CoSuggestionEvaluator',
+	#superclass : 'Object',
+	#instVars : [
+		'acceptedEntries',
+		'rejectedEntries',
+		'sessionStats',
+		'persistentStats'
+	],
+	#classInstVars : [
+		'default'
+	],
+	#category : 'AI-Pharo-Copilot-Evaluator',
+	#package : 'AI-Pharo-Copilot-Evaluator'
+}
+
+{ #category : 'accessing' }
+CoSuggestionEvaluator class >> default [
+	^ default ifNil: [ default := self new ]
+]
+
+{ #category : 'accessing' }
+CoSuggestionEvaluator class >> reset [
+	<script>
+	default := nil
+]
+
+{ #category : 'initialization' }
+CoSuggestionEvaluator >> acceptanceRate [
+	| total accepted |
+	total := sessionStats at: #totalSuggestions.
+	total = 0 ifTrue: [ ^ 0 ].
+	accepted := sessionStats at: #totalAccepted.
+	^ (accepted / total * 100) rounded
+]
+
+{ #category : 'initialization' }
+CoSuggestionEvaluator >> acceptedEntries [
+	^ acceptedEntries
+]
+
+{ #category : 'initialization' }
+CoSuggestionEvaluator >> announceEvaluation: anEvaluationEntry [
+	"Send announcement for potential model training/improvement"
+	SystemAnnouncer uniqueInstance announce: (CoEvaluationAnnouncement new
+		entry: anEvaluationEntry;
+		yourself)
+]
+
+{ #category : 'initialization' }
+CoSuggestionEvaluator >> determineContextType: aContext [
+	| source |
+	source := aContext source.
+	
+	(source includesSubstring: 'Class {') ifTrue: [ ^ #classDefinition ].
+	(source includesSubstring: '{ #category') ifTrue: [ ^ #method ].
+	(source includesSubstring: 'ifTrue:') ifTrue: [ ^ #conditional ].
+	(source includesSubstring: 'do:') ifTrue: [ ^ #iteration ].
+	(source includesSubstring: ':=') ifTrue: [ ^ #assignment ].
+	(source includesSubstring: '^') ifTrue: [ ^ #return ].
+	
+	^ #other
+]
+
+{ #category : 'initialization' }
+CoSuggestionEvaluator >> exportToCSV: filename [
+	"Export evaluation data to CSV for external analysis"
+	| entries |
+	entries := OrderedCollection new.
+	entries addAll: acceptedEntries.
+	entries addAll: rejectedEntries.
+	
+	filename asFileReference writeStreamDo: [ :stream |
+		"Header"
+		stream nextPutAll: 'Timestamp,Action,Suggestion,Context,Model,Length,Reason'; lf.
+		
+		"Data rows"
+		entries do: [ :entry |
+			stream 
+				nextPutAll: entry timestamp asString; nextPut: $,;
+				nextPutAll: entry action asString; nextPut: $,;
+				nextPutAll: '"', (entry suggestion contents copyReplaceAll: '"' with: '""'), '"'; nextPut: $,;
+				nextPutAll: '"', (entry context source copyFrom: 1 to: (50 min: entry context source size)), '"'; nextPut: $,;
+				nextPutAll: CopilotSettings modelName; nextPut: $,;
+				nextPutAll: entry suggestion contents size asString; nextPut: $,;
+				nextPutAll: (entry rejectionReason ifNil: [ '' ]); lf ] ]
+]
+
+{ #category : 'initialization' }
+CoSuggestionEvaluator >> generateReport [
+	"Generate a comprehensive evaluation report"
+	^ CoEvaluationReport new
+		evaluator: self;
+		generate
+]
+
+{ #category : 'initialization' }
+CoSuggestionEvaluator >> initialize [
+
+	super initialize.
+	acceptedEntries := OrderedCollection new.
+	rejectedEntries := OrderedCollection new.
+	sessionStats := Dictionary new.
+	self initializeStats.
+	self loadPersistentStats.
+]
+
+{ #category : 'initialization' }
+CoSuggestionEvaluator >> initializeStats [ 
+	sessionStats
+		at: #totalSuggestions put: 0;
+		at: #totalAccepted put: 0;
+		at: #totalRejected put: 0;
+		at: #sessionStartTime put: DateAndTime now;
+		at: #modelStats put: Dictionary new;
+		at: #contextStats put: Dictionary new;
+		at: #lengthStats put: Dictionary new.
+]
+
+{ #category : 'initialization' }
+CoSuggestionEvaluator >> loadPersistentStats [
+	"Load previous evaluation data if available"
+	| files |
+	
+	[ files := '.' asFileReference children select: [ :file | 
+		file basename beginsWith: 'copilot-evaluation-' ].
+		
+	files ifNotEmpty: [
+		persistentStats := OrderedCollection new.
+		files do: [ :file |
+			[ | data |
+				data := STONJSON fromString: file contents.
+				persistentStats add: data
+			] on: Error do: [ "Ignore invalid files" ] ] ]
+	] on: Error do: [ "Ignore if can't access files" ].
+]
+
+{ #category : 'initialization' }
+CoSuggestionEvaluator >> recordSuggestionAccepted: aCopilotEntry context: aCompletionContext [
+	| evaluationEntry |
+	
+	evaluationEntry := CoEvaluationEntry new
+		suggestion: aCopilotEntry;
+		context: aCompletionContext;
+		timestamp: DateAndTime now;
+		action: #accepted;
+		yourself.
+	
+	acceptedEntries add: evaluationEntry.
+	self updateStats: evaluationEntry.
+	self savePersistentStats.
+	
+	"Notify for potential model improvement"
+	self announceEvaluation: evaluationEntry.
+]
+
+{ #category : 'initialization' }
+CoSuggestionEvaluator >> recordSuggestionIgnored: aCopilotEntry context: aCompletionContext [
+	| evaluationEntry |
+	
+	evaluationEntry := CoEvaluationEntry new
+		suggestion: aCopilotEntry;
+		context: aCompletionContext;
+		timestamp: DateAndTime now;
+		action: #ignored;
+		yourself.
+	
+	"For ignored suggestions, we don't add to either collection but update stats"
+	self updateStats: evaluationEntry.
+]
+
+{ #category : 'initialization' }
+CoSuggestionEvaluator >> rejectedEntries [
+	^ rejectedEntries
+]
+
+{ #category : 'initialization' }
+CoSuggestionEvaluator >> rejectionRate [
+	| total rejected |
+	total := sessionStats at: #totalSuggestions.
+	total = 0 ifTrue: [ ^ 0 ].
+	rejected := sessionStats at: #totalRejected.
+	^ (rejected / total * 100) rounded
+]
+
+{ #category : 'initialization' }
+CoSuggestionEvaluator >> savePersistentStats [
+	"Save evaluation data to file for long-term analysis"
+	| filename data |
+	
+	filename := 'copilot-evaluation-', DateAndTime now asString, '.json'.
+	data := Dictionary new
+		at: #acceptedCount put: acceptedEntries size;
+		at: #rejectedCount put: rejectedEntries size;
+		at: #sessionStats put: sessionStats;
+		at: #timestamp put: DateAndTime now;
+		at: #modelName put: CopilotSettings modelName;
+		yourself.
+		
+	[ filename asFileReference writeStreamDo: [ :stream |
+		stream nextPutAll: (STONJSON toString: data) ]
+	] on: Error do: [ :ex |
+		"Silently ignore file write errors"
+		Transcript show: 'Could not save evaluation stats: ', ex messageText; cr ].
+]
+
+{ #category : 'initialization' }
+CoSuggestionEvaluator >> sessionStats [
+	^ sessionStats
+]
+
+{ #category : 'initialization' }
+CoSuggestionEvaluator >> updateLengthStats: length action: action [
+	| bucket |
+	bucket := length <= 10 
+		ifTrue: [ #short ]
+		ifFalse: [ length <= 50 ifTrue: [ #medium ] ifFalse: [ #long ] ].
+		
+	(sessionStats at: #lengthStats)
+		at: bucket
+		put: ((sessionStats at: #lengthStats) at: bucket ifAbsentPut: [ Dictionary new
+			at: #accepted put: 0;
+			at: #rejected put: 0;
+			at: #ignored put: 0;
+			yourself ]).
+	((sessionStats at: #lengthStats) at: bucket)
+		at: action
+		put: (((sessionStats at: #lengthStats) at: bucket) at: action) + 1.
+]
+
+{ #category : 'initialization' }
+CoSuggestionEvaluator >> updateStats: anEvaluationEntry [
+	| modelName contextType suggestionLength |
+	
+	sessionStats at: #totalSuggestions put: (sessionStats at: #totalSuggestions) + 1.
+	
+	anEvaluationEntry action = #accepted ifTrue: [
+		sessionStats at: #totalAccepted put: (sessionStats at: #totalAccepted) + 1 ].
+		
+	anEvaluationEntry action = #rejected ifTrue: [
+		sessionStats at: #totalRejected put: (sessionStats at: #totalRejected) + 1 ].
+	
+	"Update model-specific stats"
+	modelName := CopilotSettings modelName.
+	(sessionStats at: #modelStats) 
+		at: modelName 
+		put: ((sessionStats at: #modelStats) at: modelName ifAbsentPut: [ Dictionary new
+			at: #accepted put: 0;
+			at: #rejected put: 0;
+			at: #ignored put: 0;
+			yourself ]).
+	((sessionStats at: #modelStats) at: modelName) 
+		at: anEvaluationEntry action 
+		put: (((sessionStats at: #modelStats) at: modelName) at: anEvaluationEntry action) + 1.
+	
+	"Update context-type stats"
+	contextType := self determineContextType: anEvaluationEntry context.
+	(sessionStats at: #contextStats)
+		at: contextType
+		put: ((sessionStats at: #contextStats) at: contextType ifAbsentPut: [ Dictionary new
+			at: #accepted put: 0;
+			at: #rejected put: 0;
+			at: #ignored put: 0;
+			yourself ]).
+	((sessionStats at: #contextStats) at: contextType)
+		at: anEvaluationEntry action
+		put: (((sessionStats at: #contextStats) at: contextType) at: anEvaluationEntry action) + 1.
+		
+	"Update length stats"
+	suggestionLength := anEvaluationEntry suggestion contents size.
+	self updateLengthStats: suggestionLength action: anEvaluationEntry action.
+]
