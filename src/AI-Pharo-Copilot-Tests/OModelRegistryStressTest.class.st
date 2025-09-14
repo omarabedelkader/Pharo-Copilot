@@ -9,20 +9,18 @@ Class {
 OModelRegistryStressTest >> testMassiveModelRegistry [
 	| registry |
 	registry := OModelRegistry new.
-	
-	"Simulate adding many models programmatically"
-	1 to: 100 do: [ :i |
+
+	1 to: 100 do: [:i |
 		| spec |
-		spec := OModelSpec 
-			family: 'model', i asString
-			tag: 'v', i asString
-			label: 'Model ', i asString.
-		registry byFullName at: spec fullName put: spec.
-		registry byLabel at: spec label put: spec ].
-	
+		spec := OModelSpec
+			family: ('model', i asString)
+			tag:    ('v', i asString)
+			label:  ('Model ', i asString).
+		registry addSpec: spec ].
+
 	self assert: registry byFullName size equals: 100.
 	self assert: registry byLabel size equals: 100.
-	self assert: registry allSpecs size equals: 100
+	self assert: registry allSpecs size equals: 100.
 ]
 
 { #category : 'tests' }

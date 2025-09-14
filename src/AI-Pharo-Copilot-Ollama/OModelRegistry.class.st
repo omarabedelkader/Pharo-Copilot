@@ -39,16 +39,20 @@ OModelRegistry class >> refresh [
   ^ current
 ]
 
-{ #category : 'building' }
-OModelRegistry >> allSpecs [
+{ #category : 'accessing' }
+OModelRegistry >> addSpec: aSpec [
+	self byFullName at: aSpec fullName put: aSpec.
+	self byLabel    at: aSpec label    put: aSpec.
+]
 
-  ^ byFullName values asArray sort: [:a :b | a label < b label ]
+{ #category : 'accessing' }
+OModelRegistry >> allSpecs [
+	^ self byFullName values
 ]
 
 { #category : 'accessing' }
 OModelRegistry >> byFullName [
-
-	^ byFullName
+	^ byFullName ifNil: [ byFullName := Dictionary new ]
 ]
 
 { #category : 'accessing' }
@@ -59,8 +63,7 @@ OModelRegistry >> byFullName: anObject [
 
 { #category : 'accessing' }
 OModelRegistry >> byLabel [
-
-	^ byLabel
+	^ byLabel ifNil: [ byLabel := Dictionary new ]
 ]
 
 { #category : 'accessing' }
@@ -73,6 +76,13 @@ OModelRegistry >> byLabel: anObject [
 OModelRegistry >> domainValuesForSettings [ 
   "-> { 'Code Llama 7B' -> 'codellama:7b'. ... } sorted by label"
   ^ (self allSpecs collect: [:s | s label -> s fullName ])
+]
+
+{ #category : 'building' }
+OModelRegistry >> initialize [
+	super initialize.
+	byFullName := Dictionary new.
+	byLabel := Dictionary new.
 ]
 
 { #category : 'building' }
