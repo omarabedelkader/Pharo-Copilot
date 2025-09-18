@@ -19,73 +19,33 @@ CoPharoCopilotResultSetBuilder class >> initializeOnContext: aSystemCompletionCo
 { #category : 'API - building' }
 CoPharoCopilotResultSetBuilder >> buildCompletion [
 
-        | prefix suffix client content fetcher rawResponse rawResponseString contextInfo |
-        prefix := completionContext source copyFrom: 1 to: completionContext position.
-        suffix := completionContext position < completionContext source size
-                          ifTrue: [ completionContext source copyFrom: completionContext position + 1 to: completionContext source size ]
-                          ifFalse: [ '' ].
-        contextInfo := Dictionary new
-                at: #contextClass put: completionContext class name;
-                at: #cursorPosition put: completionContext position;
-                at: #sourceSize put: completionContext source size;
-                at: #fullSource put: completionContext source;
-                at: #prefix put: prefix;
-                at: #suffix put: suffix;
-                yourself.
-        CoCopilotLogger
-                logFrontEndEvent: 'Preparing completion request'
-                details: contextInfo.
+        | context prefix suffix contextInfo process fetcher |
+        context := completionContext.
+        prefix := context source copyFrom: 1 to: context position.
+        suffix := context position < context source size
+                          ifTrue: [ context source copyFrom: context position + 1 to: context source size ]
+		          ifFalse: [ '' ].
+	contextInfo := Dictionary new
+		               at: #contextClass put: context class name;
+		               at: #cursorPosition put: context position;
+		               at: #sourceSize put: context source size;
+		               at: #fullSource put: context source;
+		               at: #prefix put: prefix;
+		               at: #suffix put: suffix;
+		               yourself.
+		        process := [
+                self
+                        processCompletionFor: context
+                        prefix: prefix
+                        suffix: suffix
+                        contextInfo: contextInfo ] forkAt: Processor userBackgroundPriority.
+	
 
-        client := OllamaClient new.
-        rawResponse := client generateForPrefix: prefix suffix: suffix.
-        rawResponseString := [ rawResponse asString ]
-                on: Error
-                do: [ rawResponse printString ].
-        CoCopilotLogger
-                logBackEndEvent: 'Received raw suggestion payload'
-                details: (Dictionary new
-                        at: #rawResponseClass put: rawResponse class name;
-                        at: #rawResponse put: rawResponseString;
-                        yourself).
-        content := rawResponseString.
-        [
-                | parsed |
-                parsed := STONJSON fromString: rawResponseString.
-                (parsed isKindOf: Dictionary) ifTrue: [
-                        content := parsed at: #response ifAbsent: [ parsed at: 'response' ifAbsent: [ rawResponseString ] ] ] ]
-                on: Error
-                do: [ :ex |
-                        CoCopilotLogger
-                                logBackEndEvent: 'Failed to parse suggestion payload as JSON'
-                                details: (Dictionary new
-                                        at: #error put: ex messageText;
-                                        at: #rawResponse put: rawResponseString;
-                                        yourself) ].
-
-	        content := self cleanedContentFrom: content asString.
-        CoCopilotLogger
-                logBackEndEvent: 'Normalized suggestion content'
-                details: (Dictionary new
-                        at: #cleanedContent put: content;
-                        at: #cleanedLength put: content size;
-                        yourself).
-
-	        content isEmpty
-                ifFalse: [
-                        completionContext replaceTokenInEditorWith: content.
-                        CoCopilotLogger
-                                logFrontEndEvent: 'Applied suggestion to editor'
-                                details: (Dictionary new
-                                        at: #appliedContent put: content;
-                                        at: #appliedLength put: content size;
-                                        yourself) ]
-                ifTrue: [
-                        CoCopilotLogger
-                                logFrontEndEvent: 'No suggestion content to apply'
-                                details: (Dictionary new
-                                        at: #reason put: 'Generated content was empty';
-                                        at: #rawResponse put: rawResponseString;
-                                        yourself) ].
+	
+	CoCopilotLogger logBackEndEvent: 'Dispatched asynchronous completion fetch' details: (Dictionary new
+                        at: #processPriority put: Processor userBackgroundPriority;
+                        at: #processId put: process identityHash;
+			 yourself).
 
 	fetcher := CoCollectionFetcher onCollection: #(  ).
 	^ CoResultSet fetcher: fetcher
@@ -178,4 +138,86 @@ CoPharoCopilotResultSetBuilder >> isLanguageSpec: aString [
                                 ch isLetter
                                         or: [ ch isDigit
                                         or: [ '#+-_' includes: ch ] ] ] ]
+]
+
+{ #category : 'API - building' }
+CoPharoCopilotResultSetBuilder >> processCompletionFor: aContext prefix: prefixString suffix: suffixString contextInfo: contextInfo [
+
+        [
+                | client rawResponse rawResponseString content |
+                CoCopilotLogger
+                        logFrontEndEvent: 'Preparing completion request'
+                        details: contextInfo.
+
+                client := OllamaClient new.
+                rawResponse := client generateForPrefix: prefixString suffix: suffixString.
+                rawResponseString := [ rawResponse asString ]
+                        on: Error
+                        do: [ rawResponse printString ].
+                CoCopilotLogger
+                        logBackEndEvent: 'Received raw suggestion payload'
+                        details: (Dictionary new
+                                at: #rawResponseClass put: rawResponse class name;
+                                at: #rawResponse put: rawResponseString;
+                                yourself).
+                content := rawResponseString.
+                [
+                        | parsed |
+                        parsed := STONJSON fromString: rawResponseString.
+                        (parsed isKindOf: Dictionary) ifTrue: [
+                                content := parsed
+                                        at: #response
+                                        ifAbsent: [ parsed at: 'response' ifAbsent: [ rawResponseString ] ] ] ]
+                        on: Error
+                        do: [ :ex |
+                                CoCopilotLogger
+                                        logBackEndEvent: 'Failed to parse suggestion payload as JSON'
+                                        details: (Dictionary new
+                                                at: #error put: ex messageText;
+                                                at: #rawResponse put: rawResponseString;
+                                                yourself) ].
+
+                content := self cleanedContentFrom: content asString.
+                CoCopilotLogger
+                        logBackEndEvent: 'Normalized suggestion content'
+                        details: (Dictionary new
+                                at: #cleanedContent put: content;
+                                at: #cleanedLength put: content size;
+                                yourself).
+
+                content isEmpty
+ifFalse: [
+aContext
+                                ifNil: [
+                                        CoCopilotLogger
+                                                logFrontEndEvent: 'Skipped applying suggestion - missing context'
+                                                details: (Dictionary new
+                                                        at: #appliedContent put: content;
+                                                        at: #appliedLength put: content size;
+                                                        at: #reason put: 'Completion context was nil';
+                                                        yourself) ]
+                                ifNotNil: [
+                                        aContext replaceTokenInEditorWith: content.
+                                        CoCopilotLogger
+                                                logFrontEndEvent: 'Applied suggestion to editor'
+                                                details: (Dictionary new
+                                                        at: #appliedContent put: content;
+                                                        at: #appliedLength put: content size;
+                                                        yourself) ] ]
+                ifTrue: [
+                        CoCopilotLogger
+                                logFrontEndEvent: 'No suggestion content to apply'
+                                details: (Dictionary new
+                                        at: #reason put: 'Generated content was empty';
+                                        at: #rawResponse put: rawResponseString;                                        yourself) ]
+        ] on: Error do: [ :ex |
+                CoCopilotLogger
+                        logError: 'Asynchronous completion failed'
+                        origin: #CoPharoCopilotResultSetBuilder
+                        exception: ex
+                        payload: (Dictionary new
+                                at: #requestDetails put: contextInfo copy;
+                                at: #prefixLength put: prefixString size;
+                                at: #suffixLength put: suffixString size;
+                                yourself) ]
 ]
