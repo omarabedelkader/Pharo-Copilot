@@ -2,7 +2,9 @@ Class {
 	#name : 'CoCopilotLogger',
 	#superclass : 'Object',
 	#classInstVars : [
-		'logFileReference'
+		'logFileReference',
+		'logsDirectoryReference',
+		'evaluationLogFileReference'
 	],
 	#category : 'AI-Pharo-Copilot',
 	#package : 'AI-Pharo-Copilot'
@@ -40,11 +42,43 @@ CoCopilotLogger class >> appendLines: lines [
 ]
 
 { #category : 'class initialization' }
+CoCopilotLogger class >> ensureEvaluationLogFileInitialized [ 
+
+        [ self evaluationLogFileReference ensureCreateFile ]
+                on: Error
+                do: [ :ex | Transcript show: 'Copilot evaluation log file could not be created: ', ex messageText; cr ]
+
+]
+
+{ #category : 'class initialization' }
 CoCopilotLogger class >> ensureLogFileInitialized [
 
         [ self logFileReference ensureCreateFile ]
                 on: Error
                 do: [ :ex | Transcript show: 'Copilot log file could not be created: ', ex messageText; cr ]
+]
+
+{ #category : 'class initialization' }
+CoCopilotLogger class >> ensureLogsDirectory [
+
+        | directory |
+        directory := self logsDirectoryReference.
+        [ directory ensureCreateDirectory ]
+                on: Error
+                do: [ :ex | Transcript show: 'Copilot log directory could not be created: ', ex messageText; cr ].
+        ^ directory
+]
+
+{ #category : 'class initialization' }
+CoCopilotLogger class >> evaluationLogFileName [
+        ^ 'copilot-evaluation-log.jsonl'
+]
+
+{ #category : 'class initialization' }
+CoCopilotLogger class >> evaluationLogFileReference [
+        ^ evaluationLogFileReference ifNil: [
+                evaluationLogFileReference := (self ensureLogsDirectory)
+                        / self evaluationLogFileName ]
 ]
 
 { #category : 'class initialization' }
@@ -67,8 +101,12 @@ CoCopilotLogger class >> formatValue: anObject [
 { #category : 'class initialization' }
 CoCopilotLogger class >> initialize [
 
-        logFileReference := nil.
-        self ensureLogFileInitialized
+	logFileReference := nil.
+	        logsDirectoryReference := nil.
+        evaluationLogFileReference := nil.
+        self ensureLogsDirectory.
+        self ensureLogFileInitialized.
+        self ensureEvaluationLogFileInitialized
 ]
 
 { #category : 'class initialization' }
@@ -101,12 +139,15 @@ CoCopilotLogger class >> logError: eventName origin: originSymbol exception: anE
 
 { #category : 'class initialization' }
 CoCopilotLogger class >> logFileName [
-        ^ 'log-copilot.txt'
+
+	^ 'copilot.log'
 ]
 
 { #category : 'class initialization' }
 CoCopilotLogger class >> logFileReference [
-        ^ logFileReference ifNil: [ logFileReference := self logFileName asFileReference ]
+
+	^ logFileReference ifNil: [
+                logFileReference := (self ensureLogsDirectory) / self logFileName ]
 ]
 
 { #category : 'class initialization' }
@@ -147,4 +188,14 @@ CoCopilotLogger class >> logSection: sectionName event: eventName details: aDict
 
     self appendLines: lines
 
+]
+
+{ #category : 'class initialization' }
+CoCopilotLogger class >> logsDirectoryName [
+        ^ 'copilot-logs'
+]
+
+{ #category : 'class initialization' }
+CoCopilotLogger class >> logsDirectoryReference [
+        ^ logsDirectoryReference ifNil: [ logsDirectoryReference := self logsDirectoryName asFileReference ]
 ]

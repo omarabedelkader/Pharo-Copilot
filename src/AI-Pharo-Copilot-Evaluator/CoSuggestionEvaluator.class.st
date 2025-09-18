@@ -210,20 +210,21 @@ CoSuggestionEvaluator >> iterationSelectors [
 
 { #category : 'initialization' }
 CoSuggestionEvaluator >> loadPersistentStats [
-	"Load previous evaluation data if available"
-	| files |
-	
-	[ files := '.' asFileReference children select: [ :file | 
-		file basename beginsWith: 'copilot-evaluation-' ].
-		
-	files ifNotEmpty: [
-		persistentStats := OrderedCollection new.
-		files do: [ :file |
-			[ | data |
-				data := STONJSON fromString: file contents.
-				persistentStats add: data
-			] on: Error do: [ "Ignore invalid files" ] ] ]
-	] on: Error do: [ "Ignore if can't access files" ].
+        "Load previous evaluation data if available"
+        [ | evaluationFile |
+                evaluationFile := CoCopilotLogger evaluationLogFileReference.
+
+                (evaluationFile exists and: [ evaluationFile isFile ]) ifTrue: [
+                        persistentStats := OrderedCollection new.
+                        evaluationFile readStreamDo: [ :stream |
+                                [ stream atEnd ] whileFalse: [
+                                        | line |
+                                        line := stream nextLine.
+                                        (line isNil or: [ line isEmpty ])
+                                                ifFalse: [
+                                                        [ persistentStats add: (STONJSON fromString: line) ]
+                                                                on: Error do: [ "Ignore invalid entries" ] ] ] ] ]
+        ] on: Error do: [ "Ignore if can't access files" ].
 ]
 
 { #category : 'initialization' }
@@ -276,23 +277,27 @@ CoSuggestionEvaluator >> rejectionRate [
 
 { #category : 'initialization' }
 CoSuggestionEvaluator >> savePersistentStats [
-	"Save evaluation data to file for long-term analysis"
-	| filename data |
-	
-	filename := 'copilot-evaluation-', DateAndTime now asString, '.json'.
-	data := Dictionary new
-		at: #acceptedCount put: acceptedEntries size;
-		at: #rejectedCount put: rejectedEntries size;
-		at: #sessionStats put: sessionStats;
-		at: #timestamp put: DateAndTime now;
-		at: #modelName put: CopilotSettings modelName;
-		yourself.
-		
-	[ filename asFileReference writeStreamDo: [ :stream |
-		stream nextPutAll: (STONJSON toString: data) ]
-	] on: Error do: [ :ex |
-		"Silently ignore file write errors"
-		Transcript show: 'Could not save evaluation stats: ', ex messageText; cr ].
+        "Save evaluation data to file for long-term analysis"
+        | evaluationFile data |
+
+        evaluationFile := CoCopilotLogger evaluationLogFileReference.
+        data := Dictionary new
+                at: #acceptedCount put: acceptedEntries size;
+                at: #rejectedCount put: rejectedEntries size;
+                at: #sessionStats put: sessionStats;
+                at: #timestamp put: DateAndTime now;
+                at: #modelName put: CopilotSettings modelName;
+                yourself.
+
+        [
+                CoCopilotLogger ensureEvaluationLogFileInitialized.
+                evaluationFile writeStreamDo: [ :stream |
+                        stream setToEnd.
+                        stream nextPutAll: (STONJSON toString: data).
+                        stream nextPut: Character lf ]
+        ] on: Error do: [ :ex |
+                "Silently ignore file write errors"
+                Transcript show: 'Could not save evaluation stats: ', ex messageText; cr ].
 ]
 
 { #category : 'initialization' }
