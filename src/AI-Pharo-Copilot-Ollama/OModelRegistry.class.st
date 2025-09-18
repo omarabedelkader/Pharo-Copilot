@@ -47,7 +47,9 @@ OModelRegistry >> addSpec: aSpec [
 
 { #category : 'accessing' }
 OModelRegistry >> allSpecs [
-	^ self byFullName values
+
+	 ^ (self byFullName values asSortedCollection: [ :first :second |
+                first label <= second label ]) asArray
 ]
 
 { #category : 'accessing' }
@@ -73,9 +75,10 @@ OModelRegistry >> byLabel: anObject [
 ]
 
 { #category : 'building' }
-OModelRegistry >> domainValuesForSettings [ 
-  "-> { 'Code Llama 7B' -> 'codellama:7b'. ... } sorted by label"
-  ^ (self allSpecs collect: [:s | s label -> s fullName ])
+OModelRegistry >> domainValuesForSettings [
+	"-> { 'Code Llama 7B' -> 'codellama:7b'. ... } sorted by label"
+
+	^ (self allSpecs collect: [ :spec | spec label -> spec fullName ]) asArray
 ]
 
 { #category : 'building' }

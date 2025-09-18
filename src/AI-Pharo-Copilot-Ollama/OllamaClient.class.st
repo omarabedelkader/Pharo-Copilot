@@ -25,6 +25,34 @@ OllamaClient class >> defaultModelFullName [
       defaultModelFullName := 'codellama:7b-code' ]  "safe fallback"
 ]
 
+{ #category : 'private' }
+OllamaClient >> coerceResponseValueToString: value default: fallbackString [
+
+        value isNil ifTrue: [ ^ '' ].
+        value isString ifTrue: [ ^ value ].
+        [ ^ STONJSON toString: value ] on: Error do: [ ].
+        (value respondsTo: #asString)
+                ifTrue: [ ^ value asString ].
+        ^ fallbackString
+]
+
+{ #category : 'private' }
+OllamaClient >> ensureStringFromResponse: container fallback: fallbackString [
+
+        | value |
+        container ifNil: [ ^ fallbackString ].
+        value := (container respondsTo: #at:ifAbsent:)
+                ifTrue: [ container
+                        at: #response ifAbsent: [
+                                container
+                                        at: 'response' ifAbsent: [
+                                                container
+                                                        at: #content ifAbsent: [
+                                                                container at: 'content' ifAbsent: [ container ] ] ] ] ]
+                ifFalse: [ container ].
+        ^ self coerceResponseValueToString: value default: fallbackString
+]
+
 { #category : 'operations' }
 OllamaClient >> generate: aPromptString [
 
@@ -66,31 +94,28 @@ OllamaClient >> generate: aPromptString [
 { #category : 'as yet unclassified' }
 OllamaClient >> generateForPrefix: prefixString suffix: suffixString [
 
-        | prompt originalOptions response |
-        CoCopilotLogger
-                logBackEndEvent: 'Preparing fill-in-the-middle request'
-                details: (Dictionary new
-                        at: #prefix put: prefixString;
-                        at: #suffix put: suffixString;
-                        at: #template put: CopilotSettings fimTemplate;
-                        at: #optionsBefore put: options copy;
-                        yourself).
-        prompt := CopilotSettings fimTemplate format: { prefixString. suffixString }.
-        originalOptions := options copy.
-        options at: #task put: 'fill-in-the-middle'.
-        CoCopilotLogger
-                logBackEndEvent: 'Augmented Ollama options for fill-in-the-middle'
-                details: (Dictionary new
-                        at: #optionsAfter put: options;
-                        yourself).
-        response := self generate: prompt.
-        options := originalOptions.
-        CoCopilotLogger
-                logBackEndEvent: 'Restored Ollama options after fill-in-the-middle'
-                details: (Dictionary new
-                        at: #optionsRestored put: options;
-                        yourself).
-        ^ response
+	| prompt originalOptions response |
+	CoCopilotLogger logBackEndEvent: 'Preparing fill-in-the-middle request' details: (Dictionary new
+			 at: #prefix put: prefixString;
+			 at: #suffix put: suffixString;
+			 at: #template put: CopilotSettings fimTemplate;
+			 at: #optionsBefore put: options copy;
+			 yourself).
+
+	prompt := CopilotSettings fimTemplate format: {
+			          prefixString.
+			          suffixString }.
+	originalOptions := options copy.
+	options at: #task put: 'fill-in-the-middle'.
+	CoCopilotLogger logBackEndEvent: 'Augmented Ollama options for fill-in-the-middle' details: (Dictionary new
+			 at: #optionsAfter put: options;
+			 yourself).
+	response := self generate: prompt.
+	options := originalOptions.
+	CoCopilotLogger logBackEndEvent: 'Restored Ollama options after fill-in-the-middle' details: (Dictionary new
+			 at: #optionsRestored put: options;
+			 yourself).
+	^ response
 ]
 
 { #category : 'initialization' }
@@ -133,28 +158,22 @@ OllamaClient >> listModels [
 ]
 
 { #category : 'private' }
-OllamaClient >> normalizeResponse: resp [ 
-  "If streaming=false, Ollama returns a dict; prefer #response or #content."
-  
-  "Handle case where resp might be a string representation of JSON"
-  resp isString ifTrue: [
-    [ | parsed |
-      parsed := STONJSON fromString: resp.
-      (parsed isKindOf: Dictionary) ifTrue: [
-        ^ parsed at: #response ifAbsent: [
-          parsed at: 'response' ifAbsent: [
-            parsed at: #content ifAbsent: [
-              parsed at: 'content' ifAbsent: [ resp ] ] ] ] ].
-    ] on: Error do: [ "If parsing fails, return as is" ].
-    ^ resp ].
-  
-  (resp isKindOf: Dictionary) ifTrue: [
-    ^ resp at: #response ifAbsent: [
-        resp at: 'response' ifAbsent: [
-          resp at: #content ifAbsent: [
-            resp at: 'content' ifAbsent: [ resp asString ] ] ] ] ].
-            
-  ^ resp asString
+OllamaClient >> normalizeResponse: resp [
+	"If streaming=false, Ollama returns a dict; prefer #response or #content."
+
+	"Handle case where resp might be a string representation of JSON"
+resp isNil ifTrue: [ ^ '' ].
+	resp isString ifTrue: [
+			    | parsed |
+    parsed := self parseJsonSafely: resp.
+    parsed ifNil: [ ^ resp ].
+    (parsed isKindOf: Dictionary) ifTrue: [
+        ^ self ensureStringFromResponse: parsed fallback: resp ].
+    ^ self coerceResponseValueToString: parsed default: resp ].
+
+	^ self ensureStringFromResponse: resp fallback: resp asString .
+
+  ^ self coerceResponseValueToString: resp default: resp asString
 ]
 
 { #category : 'operations' }
@@ -205,6 +224,12 @@ OllamaClient >> options: aDictionary [
 	options := aDictionary ifNil: [ Dictionary new ]
 ]
 
+{ #category : 'private' }
+OllamaClient >> parseJsonSafely: aString [
+
+        ^ [ STONJSON fromString: aString ] on: Error do: [ nil ]
+]
+
 { #category : 'operations' }
 OllamaClient >> useDefaultModel [
 
@@ -219,25 +244,27 @@ OllamaClient >> useDefaultModel [
 { #category : 'operations' }
 OllamaClient >> useModelNamed: aString [
 
-        | tokens |
-        CoCopilotLogger
-                logBackEndEvent: 'Requested Ollama model change'
-                details: (Dictionary new
-                        at: #requestedName put: aString;
-                        yourself).
-        modelSpec := OModelRegistry current specByFullName: aString.
-        modelSpec ifNil: [
-                tokens := aString findTokens: ':'.
-                modelSpec := OModelSpec
-                        family: tokens first
-                        tag: (tokens size > 1 ifTrue: [ tokens second ] ifFalse: [ nil ])
-                        label: aString ].
-        CoCopilotLogger
-                logBackEndEvent: 'Applied Ollama model change'
-                details: (Dictionary new
-                        at: #resolvedName put: modelSpec fullName;
-                        at: #modelFamily put: modelSpec family;
-                        at: #modelTag put: modelSpec tag;
-                        at: #modelLabel put: modelSpec label;
-                        yourself).
+	| tokens family tag |
+	CoCopilotLogger logBackEndEvent: 'Requested Ollama model change' details: (Dictionary new
+			 at: #requestedName put: aString;
+			 yourself).
+	modelSpec := OModelRegistry current specByFullName: aString.
+	modelSpec ifNil: [
+			tokens := aString findTokens: ':'.
+			family := tokens isEmpty
+				          ifTrue: [ aString ]
+				          ifFalse: [ tokens first ].
+			tag := tokens size > 1
+				       ifTrue: [
+						       | parts |
+						       parts := tokens copyFrom: 2 to: tokens size.
+						       String streamContents: [ :stream | parts do: [ :each | stream nextPutAll: each ] separatedBy: [ stream nextPut: $: ] ] ]
+				       ifFalse: [ nil ].
+			modelSpec := OModelSpec family: family tag: tag label: aString ].
+	CoCopilotLogger logBackEndEvent: 'Applied Ollama model change' details: (Dictionary new
+			 at: #resolvedName put: modelSpec fullName;
+			 at: #modelFamily put: modelSpec family;
+			 at: #modelTag put: modelSpec tag;
+			 at: #modelLabel put: modelSpec label;
+			 yourself)
 ]

@@ -49,10 +49,11 @@ CoSuggestionEvaluator class >> reset [
 
 { #category : 'initialization' }
 CoSuggestionEvaluator >> acceptanceRate [
+
 	| total accepted |
-	total := sessionStats at: #totalSuggestions.
+	total := sessionStats at: #totalSuggestions ifAbsent: [ 0 ].
 	total = 0 ifTrue: [ ^ 0 ].
-	accepted := sessionStats at: #totalAccepted.
+	accepted := sessionStats at: #totalAccepted ifAbsent: [ 0 ].
 	^ (accepted / total * 100) rounded
 ]
 
@@ -77,18 +78,26 @@ CoSuggestionEvaluator >> conditionSelectors [
 
 { #category : 'initialization' }
 CoSuggestionEvaluator >> determineContextType: aContext [
-	| src |
-	src := (aContext source ifNil: [ '' ]) asString.
 
-	(self isClassDef: src)         ifTrue: [ ^ #classDef ].
-	(self isMethodDef: src)        ifTrue: [ ^ #method ].
-	(self hasTopLevel: '^' in: src)    ifTrue: [ ^ #return ].
-	(self hasTopLevel: ':=' in: src)   ifTrue: [ ^ #assignment ].
-	(self hasAnyTopLevel: self iterationSelectors in: src)
-	                                  ifTrue: [ ^ #iteration ].
-	(self hasAnyTopLevel: self conditionSelectors in: src)
-	                                  ifTrue: [ ^ #condition ].
-	^ #other
+        | src |
+        aContext isNil ifTrue: [ ^ #other ].
+        src := (aContext respondsTo: #source)
+                ifTrue: [ [ aContext source ] on: Error do: [ nil ] ]
+                ifFalse: [ aContext ].
+        src ifNil: [ ^ #other ].
+        (src respondsTo: #asString) ifFalse: [ ^ #other ].
+        src := (src asString) trimBoth.
+        src isEmpty ifTrue: [ ^ #other ].
+
+        (self isClassDef: src)         ifTrue: [ ^ #classDef ].
+        (self isMethodDef: src)        ifTrue: [ ^ #method ].
+        (self hasTopLevel: '^' in: src)    ifTrue: [ ^ #return ].
+        (self hasTopLevel: ':=' in: src)   ifTrue: [ ^ #assignment ].
+        (self hasAnyTopLevel: self iterationSelectors in: src)
+                                          ifTrue: [ ^ #iteration ].
+        (self hasAnyTopLevel: self conditionSelectors in: src)
+                                          ifTrue: [ ^ #condition ].
+        ^ #other
 ]
 
 { #category : 'initialization' }
@@ -131,37 +140,39 @@ CoSuggestionEvaluator >> hasAnyTopLevel: tokens in: src [
 
 { #category : 'initialization' }
 CoSuggestionEvaluator >> hasTopLevel: token in: src [
-	"Find TOKEN only when not inside (), [], {}, strings (''...''), or comments (""..."" )."
-	| i n p b c br inStr inCmt quote |
-	i := 1. n := src size.
-	p := b := c := br := 0.
-	inStr := false. inCmt := false. quote := $'.
-	[ i <= n ] whileTrue: [
-		| ch |
-		ch := src at: i.
-		inCmt ifTrue: [
-			ch = $" ifTrue: [ inCmt := false ].
-		] ifFalse: [
-			inStr ifTrue: [
-				ch = quote
-					ifTrue: [
-						(i < n and: [ src at: i + 1 = quote ])
-							ifTrue: [ i := i + 1 ] "escaped quote"
-							ifFalse: [ inStr := false ] ].
-			] ifFalse: [
-				ch = $" ifTrue: [ inCmt := true ].
-				ch = quote ifTrue: [ inStr := true ].
-				ch = $( ifTrue: [ p := p + 1 ].
-				ch = $) ifTrue: [ p := p - 1 max: 0 ].
-				ch = $[ ifTrue: [ b := b + 1 ].
-				ch = $] ifTrue: [ b := b - 1 max: 0 ].
-				ch = ${ ifTrue: [ br := br + 1 ].
-				ch = $} ifTrue: [ br := br - 1 max: 0 ].
-				(p = 0 and: [ b = 0 and: [ br = 0 ]]) ifTrue: [
-					(src findString: token startingAt: i) = i ifTrue: [ ^ true ] ] ] ].
-		i := i + 1 ].
-	^ false
-
+"Find TOKEN only when not inside (), [], {}, strings (''...''), or comments (""..."" )."
+        | stream depthPar depthBracket depthBrace inStr inCmt quote lookAhead |
+        src ifNil: [ ^ false ].
+        stream := ReadStream on: src asString.
+        depthPar := depthBracket := depthBrace := 0.
+        inStr := false.
+        inCmt := false.
+        quote := $'.
+        [ stream atEnd ] whileFalse: [
+                | ch |
+                ch := stream next.
+                inCmt ifTrue: [
+                        ch = $" ifTrue: [ inCmt := false ].
+                ] ifFalse: [
+                        inStr ifTrue: [
+                                ch = quote ifTrue: [
+                                        (stream atEnd not and: [ stream peek = quote ])
+                                                ifTrue: [ stream next ] "escaped quote"
+                                                ifFalse: [ inStr := false ] ].
+                        ] ifFalse: [
+                                ch = $" ifTrue: [ inCmt := true ].
+                                ch = quote ifTrue: [ inStr := true ].
+                                ch = $( ifTrue: [ depthPar := depthPar + 1 ].
+                                ch = $) ifTrue: [ depthPar := (depthPar - 1) max: 0 ].
+                                ch = $[ ifTrue: [ depthBracket := depthBracket + 1 ].
+                                ch = $] ifTrue: [ depthBracket := (depthBracket - 1) max: 0 ].
+                                ch = ${ ifTrue: [ depthBrace := depthBrace + 1 ].
+                                ch = $} ifTrue: [ depthBrace := (depthBrace - 1) max: 0 ].
+                                (depthPar = 0 and: [ depthBracket = 0 and: [ depthBrace = 0 ]]) ifTrue: [
+                                        lookAhead := stream position.
+                                        (src findString: token startingAt: lookAhead) = lookAhead ifTrue: [ ^ true ] ] ] ].
+        ].
+        ^ false
 ]
 
 { #category : 'initialization' }
@@ -189,10 +200,11 @@ CoSuggestionEvaluator >> initializeStats [
 
 { #category : 'initialization' }
 CoSuggestionEvaluator >> isClassDef: src [
-	^ (src findString: 'Class {' startingAt: 1) > 0
-	  and: [ (src findString: '#name' startingAt: 1) > 0
-	  and: [ (src findString: '#superclass' startingAt: 1) > 0 ] ].
 
+	        | normalized |
+        normalized := src asString.
+        ^ ((normalized findString: 'Class {' startingAt: 1) > 0)
+          and: [ (normalized findString: '#name' startingAt: 1) > 0 ]
 ]
 
 { #category : 'initialization' }
@@ -268,10 +280,11 @@ CoSuggestionEvaluator >> rejectedEntries [
 
 { #category : 'initialization' }
 CoSuggestionEvaluator >> rejectionRate [
+
 	| total rejected |
-	total := sessionStats at: #totalSuggestions.
+	total := sessionStats at: #totalSuggestions ifAbsent: [ 0 ].
 	total = 0 ifTrue: [ ^ 0 ].
-	rejected := sessionStats at: #totalRejected.
+	rejected := sessionStats at: #totalRejected ifAbsent: [ 0 ].
 	^ (rejected / total * 100) rounded
 ]
 
@@ -307,62 +320,72 @@ CoSuggestionEvaluator >> sessionStats [
 
 { #category : 'initialization' }
 CoSuggestionEvaluator >> updateLengthStats: length action: action [
-	| bucket |
-	bucket := length <= 10 
-		ifTrue: [ #short ]
-		ifFalse: [ length <= 50 ifTrue: [ #medium ] ifFalse: [ #long ] ].
-		
-	(sessionStats at: #lengthStats)
-		at: bucket
-		put: ((sessionStats at: #lengthStats) at: bucket ifAbsentPut: [ Dictionary new
-			at: #accepted put: 0;
-			at: #rejected put: 0;
-			at: #ignored put: 0;
-			yourself ]).
-	((sessionStats at: #lengthStats) at: bucket)
-		at: action
-		put: (((sessionStats at: #lengthStats) at: bucket) at: action) + 1.
+        | bucket lengthStats bucketStats |
+        bucket := length <= 10
+                ifTrue: [ #short ]
+                ifFalse: [ length <= 50 ifTrue: [ #medium ] ifFalse: [ #long ] ].
+
+        lengthStats := sessionStats at: #lengthStats ifAbsentPut: [ Dictionary new ].
+        bucketStats := lengthStats at: bucket ifAbsentPut: [ Dictionary new
+                at: #accepted put: 0;
+                at: #rejected put: 0;
+                at: #ignored put: 0;
+                yourself ].
+        bucketStats
+                at: action
+                put: ((bucketStats at: action ifAbsent: [ 0 ]) + 1).
 ]
 
 { #category : 'initialization' }
 CoSuggestionEvaluator >> updateStats: anEvaluationEntry [
-	| modelName contextType suggestionLength |
-	
-	sessionStats at: #totalSuggestions put: (sessionStats at: #totalSuggestions) + 1.
-	
-	anEvaluationEntry action = #accepted ifTrue: [
-		sessionStats at: #totalAccepted put: (sessionStats at: #totalAccepted) + 1 ].
-		
-	anEvaluationEntry action = #rejected ifTrue: [
-		sessionStats at: #totalRejected put: (sessionStats at: #totalRejected) + 1 ].
-	
-	"Update model-specific stats"
-	modelName := CopilotSettings modelName.
-	(sessionStats at: #modelStats) 
-		at: modelName 
-		put: ((sessionStats at: #modelStats) at: modelName ifAbsentPut: [ Dictionary new
-			at: #accepted put: 0;
-			at: #rejected put: 0;
-			at: #ignored put: 0;
-			yourself ]).
-	((sessionStats at: #modelStats) at: modelName) 
-		at: anEvaluationEntry action 
-		put: (((sessionStats at: #modelStats) at: modelName) at: anEvaluationEntry action) + 1.
-	
-	"Update context-type stats"
-	contextType := self determineContextType: anEvaluationEntry context.
-	(sessionStats at: #contextStats)
-		at: contextType
-		put: ((sessionStats at: #contextStats) at: contextType ifAbsentPut: [ Dictionary new
-			at: #accepted put: 0;
-			at: #rejected put: 0;
-			at: #ignored put: 0;
-			yourself ]).
-	((sessionStats at: #contextStats) at: contextType)
-		at: anEvaluationEntry action
-		put: (((sessionStats at: #contextStats) at: contextType) at: anEvaluationEntry action) + 1.
-		
-	"Update length stats"
-	suggestionLength := anEvaluationEntry suggestion contents size.
-	self updateLengthStats: suggestionLength action: anEvaluationEntry action.
+        | modelName contextType suggestion suggestionLength |
+
+        sessionStats
+                at: #totalSuggestions
+                put: (sessionStats at: #totalSuggestions ifAbsent: [ 0 ]) + 1.
+
+        anEvaluationEntry action = #accepted ifTrue: [
+                sessionStats
+                        at: #totalAccepted
+                        put: (sessionStats at: #totalAccepted ifAbsent: [ 0 ]) + 1 ].
+
+        anEvaluationEntry action = #rejected ifTrue: [
+                sessionStats
+                        at: #totalRejected
+                        put: (sessionStats at: #totalRejected ifAbsent: [ 0 ]) + 1 ].
+
+        "Update model-specific stats"
+        modelName := CopilotSettings modelName.
+        ((sessionStats at: #modelStats ifAbsentPut: [ Dictionary new ])
+                at: modelName
+                ifAbsentPut: [ Dictionary new
+                        at: #accepted put: 0;
+                        at: #rejected put: 0;
+                        at: #ignored put: 0;
+                        yourself ])
+                at: anEvaluationEntry action
+                put: (((sessionStats at: #modelStats) at: modelName)
+                        at: anEvaluationEntry action
+                        ifAbsent: [ 0 ]) + 1.
+
+        "Update context-type stats"
+        contextType := self determineContextType: anEvaluationEntry context.
+        ((sessionStats at: #contextStats ifAbsentPut: [ Dictionary new ])
+                at: contextType
+                ifAbsentPut: [ Dictionary new
+                        at: #accepted put: 0;
+                        at: #rejected put: 0;
+                        at: #ignored put: 0;
+                        yourself ])
+                at: anEvaluationEntry action
+                put: (((sessionStats at: #contextStats) at: contextType)
+                        at: anEvaluationEntry action
+                        ifAbsent: [ 0 ]) + 1.
+
+        "Update length stats"
+        suggestion := anEvaluationEntry suggestion.
+        suggestionLength := suggestion
+                ifNil: [ 0 ]
+                ifNotNil: [ (suggestion contents ifNil: [ '' ]) size ].
+        self updateLengthStats: suggestionLength action: anEvaluationEntry action.
 ]

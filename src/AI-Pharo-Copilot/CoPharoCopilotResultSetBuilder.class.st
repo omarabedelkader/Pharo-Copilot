@@ -94,22 +94,64 @@ CoPharoCopilotResultSetBuilder >> buildCompletion [
 { #category : 'API - building' }
 CoPharoCopilotResultSetBuilder >> cleanedContentFrom: aString [
 
-	| start end delimiter idx segment firstLine |
-	start := aString indexOfSubCollection: '```' startingAt: 1 ifAbsent: [ 0 ].
-	start > 0 ifTrue: [
-			end := aString indexOfSubCollection: '```' startingAt: start + 3 ifAbsent: [ aString size + 1 ].
-			segment := aString copyFrom: start + 3 to: end - 1.
-			idx := segment indexOf: Character lf ifAbsent: [ 0 ].
-			idx > 0 ifTrue: [
-					firstLine := segment copyFrom: 1 to: idx - 1.
-					(firstLine isEmpty or: [ self isLanguageSpec: firstLine ]) ifTrue: [ segment := segment copyFrom: idx + 1 to: segment size ] ].
-			^ segment trimBoth ].
-	delimiter := String lf , String lf.
-	idx := aString indexOfSubCollection: delimiter startingAt: 1 ifAbsent: [ 0 ].
-	segment := idx = 0
-		           ifTrue: [ aString ]
-		           ifFalse: [ aString copyFrom: 1 to: idx - 1 ].
-	^ segment trimBoth
+	| text start rest closingIndex body newlineIndex firstLine delimiter idx |
+        text := (aString ifNil: [ '' ]) asString.
+        text isEmpty ifTrue: [ ^ '' ].
+
+        start := text indexOfSubCollection: '```' startingAt: 1 ifAbsent: [ 0 ].
+        start > 0 ifTrue: [
+                rest := start + 3 <= text size
+                        ifTrue: [ text copyFrom: start + 3 to: text size ]
+                        ifFalse: [ '' ].
+                closingIndex := self indexOfClosingFenceIn: rest startingAt: 1.
+                closingIndex := closingIndex = 0
+                        ifTrue: [ rest size + 1 ]
+                        ifFalse: [ closingIndex ].
+                body := closingIndex <= 1
+                        ifTrue: [ '' ]
+                        ifFalse: [ rest copyFrom: 1 to: closingIndex - 1 ].
+                newlineIndex := body indexOf: Character lf ifAbsent: [ 0 ].
+                newlineIndex > 0
+                        ifTrue: [
+                                firstLine := body copyFrom: 1 to: newlineIndex - 1.
+                                (firstLine isEmpty or: [ self isLanguageSpec: firstLine ]) ifTrue: [
+                                        body := newlineIndex < body size
+                                                ifTrue: [ body copyFrom: newlineIndex + 1 to: body size ]
+                                                ifFalse: [ '' ] ] ]
+                        ifFalse: [
+                                (self isLanguageSpec: body) ifTrue: [ body := '' ] ].
+                ^ body trimBoth ].
+
+        delimiter := String lf , String lf.
+        idx := text indexOfSubCollection: delimiter startingAt: 1 ifAbsent: [ 0 ].
+        body := idx = 0
+                        ifTrue: [ text ]
+                        ifFalse: [ text copyFrom: 1 to: idx - 1 ].
+        ^ body trimBoth
+]
+
+{ #category : 'API - building' }
+CoPharoCopilotResultSetBuilder >> indexOfClosingFenceIn: text startingAt: startIndex [ 
+
+        | idx lastValid size |
+        text isEmpty ifTrue: [ ^ 0 ].
+        size := text size.
+        lastValid := 0.
+        idx := text indexOfSubCollection: '```' startingAt: startIndex ifAbsent: [ 0 ].
+        [ idx > 0 ] whileTrue: [
+                | before after |
+                before := idx = 1 or: [
+                        | prev |
+                        prev := text at: idx - 1.
+                        prev = Character lf or: [ prev = Character cr ] ].
+                after := (idx + 3 > size)
+                        or: [ | next |
+                                next := text at: idx + 3.
+                                next = Character lf or: [ next = Character cr ] ].
+                (before and: after) ifTrue: [ lastValid := idx ].
+                idx := text indexOfSubCollection: '```' startingAt: idx + 1 ifAbsent: [ 0 ].
+        ].
+        ^ lastValid
 ]
 
 { #category : 'initialization' }
@@ -121,10 +163,19 @@ CoPharoCopilotResultSetBuilder >> initializeOnContext: aSystemCompletionContext 
 { #category : 'API - building' }
 CoPharoCopilotResultSetBuilder >> isLanguageSpec: aString [
 
-| known |
-known := #(
-'smalltalk' 'pharo' 'bash' 'sh' 'shell' 'python'
-'javascript' 'json' 'java' 'c' 'cpp' 'xml' 'html'
-'ruby' 'php' 'sql' 'yaml' 'yml' ).
-^ known includes: aString asLowercase
+	        | candidate trimmed |
+        aString ifNil: [ ^ false ].
+        candidate := aString asString.
+        candidate isEmpty ifTrue: [ ^ false ].
+        trimmed := candidate trimBoth.
+        (trimmed size = candidate size) ifFalse: [ ^ false ].
+        candidate := trimmed.
+        ^ (#('smalltalk' 'pharo' 'bash' 'sh' 'shell' 'python'
+                'javascript' 'json' 'java' 'c' 'cpp' 'xml' 'html'
+                'ruby' 'php' 'sql' 'yaml' 'yml' 'go' 'rust' 'typescript')
+                includes: candidate asLowercase)
+                or: [ candidate allSatisfy: [ :ch |
+                                ch isLetter
+                                        or: [ ch isDigit
+                                        or: [ '#+-_' includes: ch ] ] ] ]
 ]
