@@ -19,6 +19,23 @@ RegressionTest >> testCleanedContentFromDoesNotAlterOriginalString [
 ]
 
 { #category : 'tests' }
+RegressionTest >> testDefaultModelConsistency [
+        | defaultModel oldModel client1 client2 |
+        defaultModel := OllamaClient defaultModelFullName.
+        oldModel := CopilotSettings modelName.
+        [
+                CopilotSettings modelName: defaultModel.
+                client1 := OllamaClient new.
+                client2 := OllamaClient new.
+                self assert: (client1 instVarNamed: 'modelSpec') fullName equals: defaultModel.
+                self assert: (client2 instVarNamed: 'modelSpec') fullName equals: defaultModel.
+                self
+                        assert: (client1 instVarNamed: 'modelSpec') fullName
+                        equals: (client2 instVarNamed: 'modelSpec') fullName
+        ] ensure: [ CopilotSettings modelName: oldModel ]
+]
+
+{ #category : 'tests' }
 RegressionTest >> testEvaluatorDefaultInstanceConsistency [
 	| evaluator1 evaluator2 |
 	
