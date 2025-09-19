@@ -81,36 +81,43 @@ FunctionalTest >> testModelManagementWorkflow [
 { #category : 'tests' }
 FunctionalTest >> testSettingsConfigurationWorkflow [
 	"Test complete settings configuration workflow"
+
 	| originalSettings newSettings client template |
-	
-	"1. Save current settings"
-	originalSettings := Dictionary new
-		at: #enabled put: CopilotSettings copilotEnabled;
-		at: #provider put: CopilotSettings copilotProvider;
-		at: #model put: CopilotSettings modelName;
-		at: #template put: CopilotSettings fimTemplate;
-		yourself.
-	
-	[
-		"2. Configure new settings"
-		CopilotSettings copilotEnabled: true.
-		CopilotSettings copilotProvider: #ollama.
-		CopilotSettings modelName: 'codellama:7b'.
-		CopilotSettings fimTemplate: '<PRE>%1<SUF>%2<MID>'.
-		
-		"3. Create components with new settings"
-		client := OllamaClient new.
-		template := CopilotSettings fimTemplate format: { 'prefix'. 'suffix' }.
-		
-		"4. Verify settings are applied"
-		self assert: CopilotSettings copilotEnabled.
-		self assert: (client instVarNamed: 'modelSpec') fullName equals: 'codellama:7b'.
-		self assert: template equals: '<PRE>prefix<SUF>suffix<MID>'
-	] ensure: [
-		"5. Restore original settings"
-		originalSettings keysAndValuesDo: [ :key :value |
-			key = #enabled ifTrue: [ CopilotSettings copilotEnabled: value ].
-			key = #provider ifTrue: [ CopilotSettings copilotProvider: value ].
-			key = #model ifTrue: [ CopilotSettings modelName: value ].
-			key = #template ifTrue: [ CopilotSettings fimTemplate: value ] ] ]
+       originalSettings := Dictionary new
+                at: #enabled put: CopilotSettings copilotEnabled;
+                at: #provider put: CopilotSettings copilotProvider;
+                at: #model put: CopilotSettings modelName;
+                at: #template put: CopilotSettings fimTemplate;
+                at: #host put: CopilotSettings host;
+                at: #port put: CopilotSettings port;
+                yourself.
+
+        [
+                "2. Configure new settings"
+                CopilotSettings copilotEnabled: true.
+                CopilotSettings copilotProvider: #ollama.
+                CopilotSettings modelName: 'codellama:7b'.
+                CopilotSettings fimTemplate: '<PRE>%1<SUF>%2<MID>'.
+                CopilotSettings host: 'test.host.local'.
+                CopilotSettings port: 12346.
+
+                "3. Create components with new settings"
+                client := OllamaClient new.
+                template := CopilotSettings fimTemplate format: { 'prefix'. 'suffix' }.
+
+                "4. Verify settings are applied"
+                self assert: CopilotSettings copilotEnabled.
+                self assert: (client instVarNamed: 'modelSpec') fullName equals: 'codellama:7b'.
+                self assert: template equals: '<PRE>prefix<SUF>suffix<MID>'.
+                self assert: ((client instVarNamed: 'transport') host) equals: 'test.host.local'.
+                self assert: ((client instVarNamed: 'transport') port) equals: 12346
+        ] ensure: [
+                "5. Restore original settings"
+                originalSettings keysAndValuesDo: [ :key :value |
+                        key = #enabled ifTrue: [ CopilotSettings copilotEnabled: value ].
+                        key = #provider ifTrue: [ CopilotSettings copilotProvider: value ].
+                        key = #model ifTrue: [ CopilotSettings modelName: value ].
+                        key = #template ifTrue: [ CopilotSettings fimTemplate: value ].
+                        key = #host ifTrue: [ CopilotSettings host: value ].
+                        key = #port ifTrue: [ CopilotSettings port: value ] ] ]
 ]

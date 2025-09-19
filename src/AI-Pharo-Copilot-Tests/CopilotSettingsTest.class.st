@@ -53,22 +53,24 @@ CopilotSettingsTest >> testCopilotProviderAccessor [
 
 { #category : 'tests' }
 CopilotSettingsTest >> testDefaultValues [
-    "Test that defaults are sensible without changing global state"
+	"Test that defaults are sensible without changing global state"
 
-    | enabled provider model useEnter template |
-    enabled := CopilotSettings copilotEnabled.
-    provider := CopilotSettings copilotProvider.
-    model := CopilotSettings modelName.
-    useEnter := CopilotSettings useEnterToAccept.
-    template := CopilotSettings fimTemplate.
+	| enabled provider model useEnter template host port |
+	enabled := CopilotSettings copilotEnabled.
+	provider := CopilotSettings copilotProvider.
+	model := CopilotSettings modelName.
+	useEnter := CopilotSettings useEnterToAccept.
+	template := CopilotSettings fimTemplate.
+	host := CopilotSettings host.
+    port := CopilotSettings port.
 
-    self assert: (enabled isKindOf: Boolean).
-    self assert: provider isSymbol.
-    self assert: model isString.
-    self assert: (useEnter isKindOf: Boolean).
-    self assert: template isString.
-    self assert: (template includesSubstring: '%1').
-    self assert: (template includesSubstring: '%2').
+	self assert: (enabled isKindOf: Boolean).
+	self assert: provider isSymbol.
+	self assert: model isString.
+	self assert: (useEnter isKindOf: Boolean).
+	self assert: template isString.
+	self assert: (template includesSubstring: '%1').
+	self assert: (template includesSubstring: '%2')
 ]
 
 { #category : 'tests' }
@@ -89,6 +91,16 @@ CopilotSettingsTest >> testFimTemplateValidation [
 ]
 
 { #category : 'tests' }
+CopilotSettingsTest >> testHostAccessor [
+    | old |
+    old := CopilotSettings host.
+    [
+        CopilotSettings host: 'localhost'.
+        self assert: CopilotSettings host equals: 'localhost'
+    ] ensure: [ CopilotSettings host: old ].
+]
+
+{ #category : 'tests' }
 CopilotSettingsTest >> testModelNameAccessor [
     | old |
     old := CopilotSettings modelName.
@@ -105,6 +117,16 @@ CopilotSettingsTest >> testModelNameReturnsString [
 	
 	self assert: modelName isString.
 	self deny: modelName isEmpty
+]
+
+{ #category : 'tests' }
+CopilotSettingsTest >> testPortAccessor [
+    | old |
+    old := CopilotSettings port.
+    [
+        CopilotSettings port: 12345.
+        self assert: CopilotSettings port equals: 12345.
+    ] ensure: [ CopilotSettings port: old ].
 ]
 
 { #category : 'tests' }

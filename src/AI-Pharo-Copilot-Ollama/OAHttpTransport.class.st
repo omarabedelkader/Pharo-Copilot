@@ -49,14 +49,14 @@ OAHttpTransport >> host: anObject [
 ]
 
 { #category : 'initialization' }
-OAHttpTransport >> initialize [ 
+OAHttpTransport >> initialize [
 
-  super initialize.
-  host := '127.0.0.1'.
-  port := 11434.
-  defaultHeaders := Dictionary new.
-  jsonReader := ZnUtils defaultJSONReader.
-  jsonWriter := ZnUtils defaultJSONWriter.
+	super initialize.
+  host := CopilotSettings host.
+  port := CopilotSettings port.
+	defaultHeaders := Dictionary new.
+	jsonReader := ZnUtils defaultJSONReader.
+	jsonWriter := ZnUtils defaultJSONWriter
 ]
 
 { #category : 'accessing' }

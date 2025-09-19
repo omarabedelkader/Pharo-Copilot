@@ -9,7 +9,9 @@ Class {
 		'Provider',
 		'ModelName',
 		'UseEnterToAccept',
-		'FimTemplate'
+		'FimTemplate',
+		'Host',
+		'Port'
 	],
 	#category : 'AI-Pharo-Copilot-Ollama',
 	#package : 'AI-Pharo-Copilot-Ollama'
@@ -64,6 +66,18 @@ CopilotSettings class >> fimTemplate: aString [
 ]
 
 { #category : 'accessing' }
+CopilotSettings class >> host [
+
+    ^ Host ifNil: [ Host := '127.0.0.1' ].
+]
+
+{ #category : 'accessing' }
+CopilotSettings class >> host: aString [
+
+    Host := aString.
+]
+
+{ #category : 'accessing' }
 CopilotSettings class >> modelName [
 
 	^ ModelName ifNil: [ ModelName := OllamaClient defaultModelFullName ]
@@ -73,6 +87,21 @@ CopilotSettings class >> modelName [
 CopilotSettings class >> modelName: aString [
 
     ModelName := aString.
+]
+
+{ #category : 'accessing' }
+CopilotSettings class >> port [
+
+    ^ Port ifNil: [ Port := 11434 ].
+]
+
+{ #category : 'accessing' }
+CopilotSettings class >> port: aNumber [
+    Port := (aNumber isString)
+            ifTrue: [
+                [ aNumber asNumber ] on: Error do: [ self port ]
+            ]
+            ifFalse: [ aNumber ].
 ]
 
 { #category : 'settings' }
@@ -102,6 +131,24 @@ CopilotSettings class >> settingsOn: aBuilder [
 					setSelector: #modelName:;
 					default: self modelName;
 					domainValues: self availableModelNames.
+					
+					
+					(aBuilder setting: #host)
+                                        order: 1;
+                                        label: 'Server host';
+                                        target: self;
+                                        getSelector: #host;
+                                        setSelector: #host:;
+                                        default: self host.
+
+                                (aBuilder setting: #port)
+                                        order: 2;
+                                        label: 'Server port';
+                                        target: self;
+                                        getSelector: #port;
+                                        setSelector: #port:;
+                                        default: self port.
+
 
 				(aBuilder setting: #fimTemplate)
 					label: 'FIM template';

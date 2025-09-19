@@ -67,35 +67,43 @@ CopilotSettingsValidationTest >> testProviderWithInvalidSymbols [
 
 { #category : 'accessing' }
 CopilotSettingsValidationTest >> testSettingsConsistencyAfterMultipleChanges [
-	| oldEnabled oldProvider oldModel oldEnter oldTemplate |
-	
-	"Save all current values"
-	oldEnabled := CopilotSettings copilotEnabled.
-	oldProvider := CopilotSettings copilotProvider.
-	oldModel := CopilotSettings modelName.
-	oldEnter := CopilotSettings useEnterToAccept.
-	oldTemplate := CopilotSettings fimTemplate.
-	
-	[
-		"Make multiple rapid changes"
-		10 timesRepeat: [
-			CopilotSettings copilotEnabled: true.
-			CopilotSettings copilotProvider: #test.
-			CopilotSettings modelName: 'test:model'.
-			CopilotSettings useEnterToAccept: false.
-			CopilotSettings fimTemplate: 'TEST%1TEST%2TEST'.
-			
-			"Verify consistency"
-			self assert: CopilotSettings copilotEnabled equals: true.
-			self assert: CopilotSettings copilotProvider equals: #test.
-			self assert: CopilotSettings modelName equals: 'test:model'.
-			self assert: CopilotSettings useEnterToAccept equals: false.
-			self assert: CopilotSettings fimTemplate equals: 'TEST%1TEST%2TEST' ]
-	] ensure: [
-		"Restore all values"
-		CopilotSettings copilotEnabled: oldEnabled.
-		CopilotSettings copilotProvider: oldProvider.
-		CopilotSettings modelName: oldModel.
-		CopilotSettings useEnterToAccept: oldEnter.
-		CopilotSettings fimTemplate: oldTemplate ]
+        | oldEnabled oldProvider oldModel oldEnter oldTemplate oldHost oldPort |
+
+        "Save all current values"
+        oldEnabled := CopilotSettings copilotEnabled.
+        oldProvider := CopilotSettings copilotProvider.
+        oldModel := CopilotSettings modelName.
+        oldEnter := CopilotSettings useEnterToAccept.
+        oldTemplate := CopilotSettings fimTemplate.
+        oldHost := CopilotSettings host.
+        oldPort := CopilotSettings port.
+
+        [
+                "Make multiple rapid changes"
+                10 timesRepeat: [
+                        CopilotSettings copilotEnabled: true.
+                        CopilotSettings copilotProvider: #test.
+                        CopilotSettings modelName: 'test:model'.
+                        CopilotSettings useEnterToAccept: false.
+                        CopilotSettings fimTemplate: 'TEST%1TEST%2TEST'.
+                        CopilotSettings host: 'loop.host'.
+                        CopilotSettings port: 54321.
+
+                        "Verify consistency"
+                        self assert: CopilotSettings copilotEnabled equals: true.
+                        self assert: CopilotSettings copilotProvider equals: #test.
+                        self assert: CopilotSettings modelName equals: 'test:model'.
+                        self assert: CopilotSettings useEnterToAccept equals: false.
+                        self assert: CopilotSettings fimTemplate equals: 'TEST%1TEST%2TEST'.
+                        self assert: CopilotSettings host equals: 'loop.host'.
+                        self assert: CopilotSettings port equals: 54321 ]
+        ] ensure: [
+                "Restore all values"
+                CopilotSettings copilotEnabled: oldEnabled.
+                CopilotSettings copilotProvider: oldProvider.
+                CopilotSettings modelName: oldModel.
+                CopilotSettings useEnterToAccept: oldEnter.
+                CopilotSettings fimTemplate: oldTemplate.
+                CopilotSettings host: oldHost.
+                CopilotSettings port: oldPort ]
 ]

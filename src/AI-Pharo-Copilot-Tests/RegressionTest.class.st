@@ -61,35 +61,44 @@ RegressionTest >> testRegistryCurrentInstanceConsistency [
 
 { #category : 'tests' }
 RegressionTest >> testSettingsClassVariableIsolation [
+
 	| oldValues newValues |
-	
-	"Capture current values"
-	oldValues := Dictionary new
-		at: #enabled put: CopilotSettings copilotEnabled;
-		at: #provider put: CopilotSettings copilotProvider;
-		at: #model put: CopilotSettings modelName;
-		yourself.
-	
-	[
-		"Modify settings"
-		CopilotSettings copilotEnabled: false.
-		CopilotSettings copilotProvider: #test.
-		CopilotSettings modelName: 'test:regression'.
-		
-		"Capture modified values"
-		newValues := Dictionary new
-			at: #enabled put: CopilotSettings copilotEnabled;
-			at: #provider put: CopilotSettings copilotProvider;
-			at: #model put: CopilotSettings modelName;
-			yourself.
-		
-		"Verify changes are isolated and persistent"
-		self deny: (newValues at: #enabled) equals: (oldValues at: #enabled).
-		self deny: (newValues at: #provider) equals: (oldValues at: #provider).
-		self deny: (newValues at: #model) equals: (oldValues at: #model)
-	] ensure: [
-		"Restore original values"
-		CopilotSettings copilotEnabled: (oldValues at: #enabled).
-		CopilotSettings copilotProvider: (oldValues at: #provider).
-		CopilotSettings modelName: (oldValues at: #model) ]
+	       oldValues := Dictionary new
+                at: #enabled put: CopilotSettings copilotEnabled;
+                at: #provider put: CopilotSettings copilotProvider;
+                at: #model put: CopilotSettings modelName;
+                at: #host put: CopilotSettings host;
+                at: #port put: CopilotSettings port;
+                yourself.
+
+        [
+                "Modify settings"
+                CopilotSettings copilotEnabled: false.
+                CopilotSettings copilotProvider: #test.
+                CopilotSettings modelName: 'test:regression'.
+                CopilotSettings host: 'regression.host'.
+                CopilotSettings port: (oldValues at: #port) + 10.
+
+                "Capture modified values"
+                newValues := Dictionary new
+                        at: #enabled put: CopilotSettings copilotEnabled;
+                        at: #provider put: CopilotSettings copilotProvider;
+                        at: #model put: CopilotSettings modelName;
+                        at: #host put: CopilotSettings host;
+                        at: #port put: CopilotSettings port;
+                        yourself.
+
+                "Verify changes are isolated and persistent"
+                self deny: (newValues at: #enabled) equals: (oldValues at: #enabled).
+                self deny: (newValues at: #provider) equals: (oldValues at: #provider).
+                self deny: (newValues at: #model) equals: (oldValues at: #model).
+                self deny: (newValues at: #host) equals: (oldValues at: #host).
+                self deny: (newValues at: #port) equals: (oldValues at: #port)
+        ] ensure: [
+                "Restore original values"
+                CopilotSettings copilotEnabled: (oldValues at: #enabled).
+                CopilotSettings copilotProvider: (oldValues at: #provider).
+                CopilotSettings modelName: (oldValues at: #model).
+                CopilotSettings host: (oldValues at: #host).
+                CopilotSettings port: (oldValues at: #port) ]
 ]
