@@ -1,3 +1,6 @@
+"
+Logger
+"
 Class {
 	#name : 'CoCopilotLogger',
 	#superclass : 'Object',

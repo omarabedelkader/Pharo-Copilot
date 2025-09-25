@@ -1,3 +1,6 @@
+"
+Icon
+"
 Class {
 	#name : 'CopilotIcons',
 	#superclass : 'Object',
@@ -9,11 +12,11 @@ Class {
 }
 
 { #category : 'as yet unclassified' }
-CopilotIcons class >> chatPharoIcon [
+CopilotIcons class >> copilotIcon [
 
-	<script: 'self chatPharoIcon inspect'>
+	<script: 'self copilotIcon inspect'>
 	^ self icons
-		  at: #chatPharoIcon
+		  at: #copilotIcon
 		  ifAbsentPut: [ (Form fromBinaryStream: self copilotIconBase64 base64Decoded asByteArray readStream) scaledToSize: 20 @ 20 ]
 ]
 
