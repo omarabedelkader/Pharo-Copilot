@@ -1,10 +1,17 @@
+# ChatPharo
+
+[![Pharo 13 & 14](https://img.shields.io/badge/Pharo-13%20%7C%2014-2c98f0.svg)](https://github.com/omarabedelkader/Pharo-Copilot)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/omarabedelkader/Pharo-Copilot/blob/master/LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/omarabedelkader/Pharo-Copilot/pulls)
+[![Status: Active](https://img.shields.io/badge/status-active-success.svg)](https://github.com/omarabedelkader/Pharo-Copilot)
+
 # Pharo-Copilot
 
-**Pharo-Copilot is an AI-powered code completion engine for Pharo, designed to enhance your coding experience with intelligent, context-aware suggestions.**
+Pharo-Copilot is an AI-powered code completion engine for Pharo, designed to enhance your coding experience with intelligent, context-aware suggestions.**
 
 ## Installation
 
-Load **Pharo-Copilot** directly into your Pharo image using Metacello:
+To install stable version of `Pharo-Copilot` in your image you can use:
 
 ```smalltalk
 Metacello new
