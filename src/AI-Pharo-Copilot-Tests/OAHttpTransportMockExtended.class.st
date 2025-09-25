@@ -6,8 +6,9 @@ Class {
 		'shouldThrowError',
 		'callCount'
 	],
-	#category : 'AI-Pharo-Copilot-Tests',
-	#package : 'AI-Pharo-Copilot-Tests'
+	#category : 'AI-Pharo-Copilot-Tests-Mock',
+	#package : 'AI-Pharo-Copilot-Tests',
+	#tag : 'Mock'
 }
 
 { #category : 'accessing' }

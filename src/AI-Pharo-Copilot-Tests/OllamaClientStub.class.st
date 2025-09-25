@@ -1,3 +1,6 @@
+"
+Mock
+"
 Class {
 	#name : 'OllamaClientStub',
 	#superclass : 'Object',
@@ -7,8 +10,9 @@ Class {
 		'callCount',
 		'lastRequestedModel'
 	],
-	#category : 'AI-Pharo-Copilot-Tests',
-	#package : 'AI-Pharo-Copilot-Tests'
+	#category : 'AI-Pharo-Copilot-Tests-Mock',
+	#package : 'AI-Pharo-Copilot-Tests',
+	#tag : 'Mock'
 }
 
 { #category : 'accessing' }

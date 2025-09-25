@@ -328,6 +328,42 @@ CopilotSettingsTest >> testModelTemplateClearedWhenModelChanges [
 ]
 
 { #category : 'tests' }
+CopilotSettingsTest >> testModelTemplateDefaultsWhenResponseHasNoTemplate [
+    | stub oldFactory template |
+    stub := OllamaClientStub new withResponse: Dictionary new.
+    oldFactory := CopilotSettings ollamaClientFactory.
+    [
+        CopilotSettings ollamaClientFactory: [ stub ].
+        CopilotSettings clearCachedModelMetadata.
+        template := CopilotSettings modelTemplate.
+        self assert: template equals: 'Not provided by model.'.
+        self assert: stub callCount equals: 1.
+    ] ensure: [
+        CopilotSettings ollamaClientFactory: oldFactory.
+        CopilotSettings clearCachedModelMetadata.
+    ].
+]
+
+{ #category : 'tests' }
+CopilotSettingsTest >> testModelTemplateDefaultsWhenTemplateEmptyString [
+    | stub oldFactory template |
+    stub := OllamaClientStub new withResponse: (Dictionary new
+        at: #template put: '';
+        yourself).
+    oldFactory := CopilotSettings ollamaClientFactory.
+    [
+        CopilotSettings ollamaClientFactory: [ stub ].
+        CopilotSettings clearCachedModelMetadata.
+        template := CopilotSettings modelTemplate.
+        self assert: template equals: 'Not provided by model.'.
+        self assert: stub callCount equals: 1.
+    ] ensure: [
+        CopilotSettings ollamaClientFactory: oldFactory.
+        CopilotSettings clearCachedModelMetadata.
+    ].
+]
+
+{ #category : 'tests' }
 CopilotSettingsTest >> testModelTemplateFetchedFromOllama [
     | stub oldFactory template |
     stub := OllamaClientStub new withResponse: (Dictionary new
@@ -341,6 +377,25 @@ CopilotSettingsTest >> testModelTemplateFetchedFromOllama [
         self assert: template equals: 'SERVER TEMPLATE'.
         self assert: stub callCount equals: 1.
         self assert: stub lastRequestedModel equals: CopilotSettings modelName.
+    ] ensure: [
+        CopilotSettings ollamaClientFactory: oldFactory.
+        CopilotSettings clearCachedModelMetadata.
+    ].
+]
+
+{ #category : 'tests' }
+CopilotSettingsTest >> testModelTemplateHandlesNonStringValues [
+    | stub oldFactory template |
+    stub := OllamaClientStub new withResponse: (Dictionary new
+        at: #template put: 42;
+        yourself).
+    oldFactory := CopilotSettings ollamaClientFactory.
+    [
+        CopilotSettings ollamaClientFactory: [ stub ].
+        CopilotSettings clearCachedModelMetadata.
+        template := CopilotSettings modelTemplate.
+        self assert: template equals: '42'.
+        self assert: stub callCount equals: 1.
     ] ensure: [
         CopilotSettings ollamaClientFactory: oldFactory.
         CopilotSettings clearCachedModelMetadata.

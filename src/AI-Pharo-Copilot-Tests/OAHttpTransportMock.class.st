@@ -1,3 +1,6 @@
+"
+A mock class
+"
 Class {
 	#name : 'OAHttpTransportMock',
 	#superclass : 'Object',
@@ -5,8 +8,9 @@ Class {
 		'lastPath',
 		'lastBody'
 	],
-	#category : 'AI-Pharo-Copilot-Tests',
-	#package : 'AI-Pharo-Copilot-Tests'
+	#category : 'AI-Pharo-Copilot-Tests-Mock',
+	#package : 'AI-Pharo-Copilot-Tests',
+	#tag : 'Mock'
 }
 
 { #category : 'accessing' }
