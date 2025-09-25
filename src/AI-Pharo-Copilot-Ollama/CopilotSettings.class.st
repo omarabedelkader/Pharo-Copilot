@@ -385,6 +385,35 @@ CopilotSettings class >> port: aNumber [
 		self clearCachedModelMetadata.
 ]
 
+{ #category : 'accessing' }
+CopilotSettings class >> resetToDefaultSettings [
+	<script>
+    Enabled := nil.
+    Provider := nil.
+    ModelName := nil.
+    FimTemplate := nil.
+    Host := nil.
+    Port := nil.
+    FimTemplateOption := nil.
+    CustomFimTemplateFile := nil.
+    ModelMetadata := nil.
+    OllamaClientFactory := nil.
+]
+
+{ #category : 'accessing' }
+CopilotSettings class >> restoreSettingsFromSnapshot: aDictionary [
+	Enabled := aDictionary at: #Enabled ifAbsent: [ nil ].
+	Provider := aDictionary at: #Provider ifAbsent: [ nil ].
+	ModelName := aDictionary at: #ModelName ifAbsent: [ nil ].
+	FimTemplate := aDictionary at: #FimTemplate ifAbsent: [ nil ].
+	Host := aDictionary at: #Host ifAbsent: [ nil ].
+	Port := aDictionary at: #Port ifAbsent: [ nil ].
+	FimTemplateOption := aDictionary at: #FimTemplateOption ifAbsent: [ nil ].
+	CustomFimTemplateFile := aDictionary at: #CustomFimTemplateFile ifAbsent: [ nil ].
+	ModelMetadata := aDictionary at: #ModelMetadata ifAbsent: [ nil ].
+	OllamaClientFactory := aDictionary at: #OllamaClientFactory ifAbsent: [ nil ]
+]
+
 { #category : 'settings' }
 CopilotSettings class >> settingsOn: aBuilder [
 	"Only show copilot settings if copilot engine is selected"
@@ -488,6 +517,23 @@ CopilotSettings class >> settingsOn: aBuilder [
 ]
 
 { #category : 'accessing' }
+CopilotSettings class >> settingsSnapshot [
+
+    ^ Dictionary new
+        at: #Enabled put: Enabled;
+        at: #Provider put: Provider;
+        at: #ModelName put: ModelName;
+        at: #FimTemplate put: FimTemplate;
+        at: #Host put: Host;
+        at: #Port put: Port;
+        at: #FimTemplateOption put: FimTemplateOption;
+        at: #CustomFimTemplateFile put: CustomFimTemplateFile;
+        at: #ModelMetadata put: ModelMetadata;
+        at: #OllamaClientFactory put: OllamaClientFactory;
+        yourself
+]
+
+{ #category : 'accessing' }
 CopilotSettings class >> shouldShowDetailedSettings [
     "Show detailed settings if copilot is enabled"
     
@@ -498,4 +544,15 @@ CopilotSettings class >> shouldShowDetailedSettings [
 { #category : 'accessing' }
 CopilotSettings class >> templatesDirectory [
     ^ (FileLocator imageDirectory / 'pharo-copilot' / 'templates') asFileReference
+]
+
+{ #category : 'accessing' }
+CopilotSettings class >> withDefaultSettingsDo: aBlock [
+
+    | snapshot |
+    snapshot := self settingsSnapshot.
+    [
+        self resetToDefaultSettings.
+        aBlock value
+    ] ensure: [ self restoreSettingsFromSnapshot: snapshot ]
 ]

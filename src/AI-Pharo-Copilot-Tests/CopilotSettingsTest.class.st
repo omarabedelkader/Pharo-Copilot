@@ -144,22 +144,24 @@ CopilotSettingsTest >> testCustomFimTemplateFilePathIgnoresNilAndEmptyStrings [
 
 { #category : 'tests' }
 CopilotSettingsTest >> testDefaultValues [
-	"Test that defaults are sensible without changing global state"
+CopilotSettings withDefaultSettingsDo: [
+        | enabled provider model template host port |
+        enabled := CopilotSettings copilotEnabled.
+        provider := CopilotSettings copilotProvider.
+        model := CopilotSettings modelName.
+        template := CopilotSettings fimTemplate.
+        host := CopilotSettings host.
+        port := CopilotSettings port.
 
-	| enabled provider model template host port |
-	enabled := CopilotSettings copilotEnabled.
-	provider := CopilotSettings copilotProvider.
-	model := CopilotSettings modelName.
-	template := CopilotSettings fimTemplate.
-	host := CopilotSettings host.
-    port := CopilotSettings port.
-
-	self assert: (enabled isKindOf: Boolean).
-	self assert: provider isSymbol.
-	self assert: model isString.
-	self assert: template isString.
-	self assert: (template includesSubstring: '%1').
-	self assert: (template includesSubstring: '%2')
+        self assert: (enabled isKindOf: Boolean).
+        self assert: provider isSymbol.
+        self assert: model isString.
+        self assert: template isString.
+        self assert: (template includesSubstring: '%1').
+        self assert: (template includesSubstring: '%2').
+        self assert: (host isKindOf: String).
+        self assert: port isNumber
+    ]
 ]
 
 { #category : 'tests' }
@@ -278,10 +280,14 @@ CopilotSettingsTest >> testFimTemplateSetterForcesInlineOption [
 
 { #category : 'tests' }
 CopilotSettingsTest >> testFimTemplateValidation [
-    | template |
-    template := CopilotSettings fimTemplate.
-    self assert: (template includesSubstring: '%1').
-    self assert: (template includesSubstring: '%2').
+
+    CopilotSettings withDefaultSettingsDo: [  
+        | template |
+        template := CopilotSettings fimTemplate.
+        self assert: (template includesSubstring: '%1').
+        self assert: (template includesSubstring: '%2')
+
+]
 ]
 
 { #category : 'tests' }
@@ -304,12 +310,14 @@ CopilotSettingsTest >> testMetadataStringForKeyDefaultWhenMissing [
 
 { #category : 'tests' }
 CopilotSettingsTest >> testModelNameAccessor [
-    | old |
-    old := CopilotSettings modelName.
-    self assert: old equals: OllamaClient defaultModelFullName.
-    CopilotSettings modelName: 'foo'.
-    self assert: CopilotSettings modelName equals: 'foo'.
-    CopilotSettings modelName: old
+    CopilotSettings withDefaultSettingsDo: [
+        | old |
+        old := CopilotSettings modelName.
+        self assert: old equals: OllamaClient defaultModelFullName.
+        CopilotSettings modelName: 'foo'.
+        self assert: CopilotSettings modelName equals: 'foo'.
+        CopilotSettings modelName: old
+    ]
 ]
 
 { #category : 'tests' }
