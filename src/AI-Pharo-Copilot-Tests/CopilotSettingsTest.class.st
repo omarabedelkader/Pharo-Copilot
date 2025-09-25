@@ -52,6 +52,30 @@ CopilotSettingsTest >> testCopilotProviderAccessor [
 ]
 
 { #category : 'tests' }
+CopilotSettingsTest >> testCustomFimTemplateFallsBackToInlineWhenFileEmpty [
+    | oldOption oldTemplate oldFile tempFile inlineTemplate |
+    oldOption := CopilotSettings fimTemplateOption.
+    oldTemplate := CopilotSettings fimTemplate.
+    oldFile := CopilotSettings customFimTemplateFile.
+    tempFile := FileLocator temp / 'copilot-empty-fim-template.tmpl'.
+    inlineTemplate := 'INLINE-FALLBACK<PRE>%1<SUF>%2<MID>'.
+    [
+        tempFile exists ifTrue: [ tempFile ensureDelete ].
+        CopilotSettings fimTemplate: inlineTemplate.
+        CopilotSettings customFimTemplateFile: tempFile.
+        tempFile parent ensureCreateDirectory.
+        tempFile ensureCreateFile.
+        CopilotSettings fimTemplateOption: #customFile.
+        self assert: CopilotSettings fimTemplate equals: inlineTemplate.
+    ] ensure: [
+        tempFile exists ifTrue: [ tempFile ensureDelete ].
+        CopilotSettings fimTemplate: oldTemplate.
+        CopilotSettings customFimTemplateFile: oldFile.
+        CopilotSettings fimTemplateOption: oldOption.
+    ].
+]
+
+{ #category : 'tests' }
 CopilotSettingsTest >> testCustomFimTemplateFilePathAccessor [
     | oldPath tempFile |
     oldPath := CopilotSettings customFimTemplateFilePath.
@@ -124,6 +148,29 @@ CopilotSettingsTest >> testFimTemplateOptionDefault [
         CopilotSettings fimTemplateOption: #inline.
         self assert: CopilotSettings fimTemplateOption equals: #inline
     ] ensure: [ CopilotSettings fimTemplateOption: oldOption ].
+]
+
+{ #category : 'tests' }
+CopilotSettingsTest >> testFimTemplateSetterForcesInlineOption [
+    | oldOption oldTemplate oldFile tempFile inlineTemplate |
+    oldOption := CopilotSettings fimTemplateOption.
+    oldTemplate := CopilotSettings fimTemplate.
+    oldFile := CopilotSettings customFimTemplateFile.
+    tempFile := FileLocator temp / 'copilot-inline-template.tmpl'.
+    inlineTemplate := 'INLINE-FORCED<PRE>%1<SUF>%2<MID>'.
+    [
+        tempFile exists ifTrue: [ tempFile ensureDelete ].
+        CopilotSettings customFimTemplateFile: tempFile.
+        CopilotSettings fimTemplateOption: #customFile.
+        CopilotSettings fimTemplate: inlineTemplate.
+        self assert: CopilotSettings fimTemplate equals: inlineTemplate.
+        self assert: CopilotSettings fimTemplateOption equals: #inline.
+    ] ensure: [
+        tempFile exists ifTrue: [ tempFile ensureDelete ].
+        CopilotSettings fimTemplate: oldTemplate.
+        CopilotSettings customFimTemplateFile: oldFile.
+        CopilotSettings fimTemplateOption: oldOption.
+    ].
 ]
 
 { #category : 'tests' }

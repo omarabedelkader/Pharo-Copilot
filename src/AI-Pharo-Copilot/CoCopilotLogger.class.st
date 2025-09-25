@@ -63,7 +63,8 @@ CoCopilotLogger class >> ensureLogsDirectory [
 
         | directory |
         directory := self logsDirectoryReference.
-        [ directory ensureCreateDirectory ]
+        [ directory directory parent ensureCreateDirectory.
+                directory ensureCreateDirectory ]
                 on: Error
                 do: [ :ex | Transcript show: 'Copilot log directory could not be created: ', ex messageText; cr ].
         ^ directory
@@ -202,5 +203,13 @@ CoCopilotLogger class >> logsDirectoryName [
 
 { #category : 'class initialization' }
 CoCopilotLogger class >> logsDirectoryReference [
-        ^ logsDirectoryReference ifNil: [ logsDirectoryReference := self logsDirectoryName asFileReference ]
+        ^ logsDirectoryReference ifNil: [
+                logsDirectoryReference := FileLocator imageDirectory
+                        / self pharoCopilotDirectoryName
+                        / self logsDirectoryName ]
+]
+
+{ #category : 'class initialization' }
+CoCopilotLogger class >> pharoCopilotDirectoryName [
+        ^ 'pharo-copilot'
 ]
