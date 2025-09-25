@@ -90,6 +90,24 @@ CopilotSettingsTest >> testCustomFimTemplateFilePathAccessor [
 ]
 
 { #category : 'tests' }
+CopilotSettingsTest >> testCustomFimTemplateFilePathIgnoresNilAndEmptyStrings [
+    | oldPath tempFile |
+    oldPath := CopilotSettings customFimTemplateFilePath.
+    tempFile := FileLocator temp / 'copilot-custom-fim-template-ignore.tmpl'.
+    [
+        CopilotSettings customFimTemplateFilePath: tempFile fullName.
+        self assert: CopilotSettings customFimTemplateFilePath equals: tempFile fullName.
+        CopilotSettings customFimTemplateFilePath: nil.
+        self assert: CopilotSettings customFimTemplateFilePath equals: tempFile fullName.
+        CopilotSettings customFimTemplateFilePath: ''.
+        self assert: CopilotSettings customFimTemplateFilePath equals: tempFile fullName.
+    ] ensure: [
+        CopilotSettings customFimTemplateFilePath: oldPath.
+        tempFile exists ifTrue: [ tempFile ensureDelete ].
+    ].
+]
+
+{ #category : 'tests' }
 CopilotSettingsTest >> testDefaultValues [
 	"Test that defaults are sensible without changing global state"
 
@@ -107,6 +125,30 @@ CopilotSettingsTest >> testDefaultValues [
 	self assert: template isString.
 	self assert: (template includesSubstring: '%1').
 	self assert: (template includesSubstring: '%2')
+]
+
+{ #category : 'tests' }
+CopilotSettingsTest >> testEnsureCustomFimTemplateFileSeedsWithCurrentTemplate [
+    | oldOption oldTemplate oldFile tempFile inlineTemplate |
+    oldOption := CopilotSettings fimTemplateOption.
+    oldTemplate := CopilotSettings fimTemplate.
+    oldFile := CopilotSettings customFimTemplateFile.
+    tempFile := FileLocator temp / 'copilot-custom-fim-template-seed.tmpl'.
+    inlineTemplate := 'SEEDED<PRE>%1<SUF>%2<MID>'.
+    [
+        tempFile exists ifTrue: [ tempFile ensureDelete ].
+        CopilotSettings fimTemplate: inlineTemplate.
+        CopilotSettings customFimTemplateFile: tempFile.
+        CopilotSettings ensureCustomFimTemplateFile.
+        self assert: tempFile exists.
+        self assert: tempFile contents equals: inlineTemplate.
+        self assert: CopilotSettings fimTemplate equals: inlineTemplate.
+    ] ensure: [
+        tempFile exists ifTrue: [ tempFile ensureDelete ].
+        CopilotSettings fimTemplate: oldTemplate.
+        CopilotSettings customFimTemplateFile: oldFile.
+        CopilotSettings fimTemplateOption: oldOption.
+    ].
 ]
 
 { #category : 'tests' }
@@ -148,6 +190,32 @@ CopilotSettingsTest >> testFimTemplateOptionDefault [
         CopilotSettings fimTemplateOption: #inline.
         self assert: CopilotSettings fimTemplateOption equals: #inline
     ] ensure: [ CopilotSettings fimTemplateOption: oldOption ].
+]
+
+{ #category : 'tests' }
+CopilotSettingsTest >> testFimTemplateOptionNormalizesInputs [
+    | oldOption oldTemplate oldFile tempFile inlineTemplate |
+    oldOption := CopilotSettings fimTemplateOption.
+    oldTemplate := CopilotSettings fimTemplate.
+    oldFile := CopilotSettings customFimTemplateFile.
+    tempFile := FileLocator temp / 'copilot-fim-template-normalization.tmpl'.
+    inlineTemplate := 'NORMALIZE<PRE>%1<SUF>%2<MID>'.
+    [
+        tempFile exists ifTrue: [ tempFile ensureDelete ].
+        CopilotSettings fimTemplate: inlineTemplate.
+        CopilotSettings customFimTemplateFile: tempFile.
+        CopilotSettings fimTemplateOption: 'customFile'.
+        self assert: CopilotSettings fimTemplateOption equals: #customFile.
+        self assert: tempFile exists.
+        CopilotSettings fimTemplateOption: #nonsense.
+        self assert: CopilotSettings fimTemplateOption equals: #inline.
+        self assert: CopilotSettings fimTemplate equals: inlineTemplate.
+    ] ensure: [
+        tempFile exists ifTrue: [ tempFile ensureDelete ].
+        CopilotSettings fimTemplate: oldTemplate.
+        CopilotSettings customFimTemplateFile: oldFile.
+        CopilotSettings fimTemplateOption: oldOption.
+    ].
 ]
 
 { #category : 'tests' }
