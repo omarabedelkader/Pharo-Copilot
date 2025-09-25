@@ -374,6 +374,22 @@ OllamaClientTest >> testOptionsSetterStoresDictionary [
 ]
 
 { #category : 'tests' }
+OllamaClientTest >> testShowModelUsesApiShow [
+    | client mock response |
+    client := OllamaClient new.
+    mock := OAHttpTransportMockExtended new.
+    response := Dictionary new
+        at: #template put: 'value';
+        yourself.
+    mock mockResponse: response.
+    client instVarNamed: 'transport' put: mock.
+
+    self assert: (client showModelNamed: 'codellama:7b') identicalTo: response.
+    self assert: mock lastPath equals: 'api/show'.
+    self assert: (mock lastBody at: #model) equals: 'codellama:7b'.
+]
+
+{ #category : 'tests' }
 OllamaClientTest >> testUseDefaultModelSetsModelSpec [
 
         | client spec |

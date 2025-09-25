@@ -230,6 +230,29 @@ OllamaClient >> parseJsonSafely: aString [
         ^ [ STONJSON fromString: aString ] on: Error do: [ nil ]
 ]
 
+{ #category : 'as yet unclassified' }
+OllamaClient >> showModelNamed: aModelFullName [
+
+    | payload response |
+    payload := Dictionary new
+        at: #model put: aModelFullName;
+        yourself.
+    CoCopilotLogger
+        logBackEndEvent: 'Requesting Ollama model details'
+        details: (Dictionary new
+            at: #endpoint put: 'api/show';
+            at: #modelFullName put: aModelFullName;
+            yourself).
+    response := transport postJsonAt: 'api/show' body: payload.
+    CoCopilotLogger
+        logBackEndEvent: 'Received Ollama model details'
+        details: (Dictionary new
+            at: #responseClass put: response class name;
+            at: #rawResponse put: ([ response asString ] on: Error do: [ response printString ]);
+            yourself).
+    ^ response
+]
+
 { #category : 'operations' }
 OllamaClient >> useDefaultModel [
 
