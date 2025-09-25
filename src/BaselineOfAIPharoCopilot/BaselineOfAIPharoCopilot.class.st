@@ -14,7 +14,7 @@ BaselineOfAIPharoCopilot class >> base64ToMorph: aString [
 { #category : 'as yet unclassified' }
 BaselineOfAIPharoCopilot class >> copilotLogo [
 
-	<script: 'self chatPharoLogo form asPresenter open'>
+	<script: 'self copilotLogo form asPresenter open'>
 	^ self base64ToMorph: self copilotLogoBase64
 ]
 
