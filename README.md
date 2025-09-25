@@ -5,7 +5,7 @@
 
 # Pharo-Copilot
 
-Pharo-Copilot is an AI-powered code completion engine for Pharo, designed to enhance your coding experience with intelligent, context-aware suggestions.**
+Pharo-Copilot is an AI-powered code completion engine for Pharo, designed to enhance your coding experience with intelligent, context-aware suggestions.
 
 ## Installation
 
