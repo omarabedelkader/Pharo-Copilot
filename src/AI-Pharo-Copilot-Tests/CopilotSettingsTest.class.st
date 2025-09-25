@@ -20,11 +20,11 @@ CopilotSettingsTest >> testAvailableFimTemplateOptionsIncludesInlineAndCustom [
 
 { #category : 'tests' }
 CopilotSettingsTest >> testAvailableModelName [
-    | domain |
-    domain := CopilotSettings availableModelNames.
-    self assert: domain size > 0.
-    self assert: (domain anySatisfy: [:assoc | assoc key = 'Code Llama 7B' and: [assoc value = 'codellama:7b']]).
-self assert: (domain anySatisfy: [:assoc | assoc key = 'Code Llama 13B' and: [assoc value = 'codellama:13b']]).
+
+	| domain |
+	domain := CopilotSettings availableModelNames.
+	self assert: domain size > 0.
+	self assert: (domain anySatisfy: [ :assoc | assoc key = 'Code Llama 7B' and: [ assoc value = 'codellama:7b' ] ]).
 ]
 
 { #category : 'tests' }

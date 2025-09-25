@@ -6,6 +6,34 @@ Class {
 }
 
 { #category : 'tests' }
+OModelRegistryTest >> defaultModelsResponse [
+
+    ^ Dictionary new
+            at: #models put: {
+                    Dictionary new
+                            at: #name put: 'codellama:7b';
+                            yourself.
+                    Dictionary new
+                            at: #name put: 'codellama:13b';
+                            yourself };
+            yourself
+]
+
+{ #category : 'tests' }
+OModelRegistryTest >> setUp [
+    super setUp.
+    OModelRegistry modelsFetcher: [ self defaultModelsResponse ].
+    OModelRegistry refresh
+]
+
+{ #category : 'running' }
+OModelRegistryTest >> tearDown [
+    OModelRegistry modelsFetcher: nil.
+    OModelRegistry reset.
+    super tearDown
+]
+
+{ #category : 'tests' }
 OModelRegistryTest >> testAllSpecsReturnsSortedArray [ 
 	| registry specs |
 	registry := OModelRegistry build.
@@ -84,6 +112,18 @@ OModelRegistryTest >> testRebuildHandlesEmptyPragmas [
 	
 	self assert: ((registry byFullName) isKindOf: Dictionary).
 	self assert: ((registry byLabel) isKindOf: Dictionary)
+]
+
+{ #category : 'tests' }
+OModelRegistryTest >> testRebuildWithoutRemoteModelsDoesNotIncludeCatalogEntries [
+    | registry |
+    OModelRegistry modelsFetcher: [ Dictionary new at: #models put: #(  ); yourself ].
+    OModelRegistry refresh.
+    registry := OModelRegistry current.
+    self assert: registry byFullName isEmpty.
+    self assert: registry byLabel isEmpty.
+    OModelRegistry modelsFetcher: [ self defaultModelsResponse ].
+    OModelRegistry refresh
 ]
 
 { #category : 'tests' }

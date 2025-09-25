@@ -9,7 +9,8 @@ Class {
 		'byLabel'
 	],
 	#classInstVars : [
-		'current'
+		'current',
+		'modelsFetcher'
 	],
 	#category : 'AI-Pharo-Copilot-Ollama',
 	#package : 'AI-Pharo-Copilot-Ollama'
@@ -32,11 +33,36 @@ OModelRegistry class >> current [
 ]
 
 { #category : 'accessing' }
+OModelRegistry class >> fetchModelsResponse [
+
+    | fetcher |
+    fetcher := self modelsFetcher.
+    fetcher ifNotNil: [ ^ fetcher value ].
+    ^ OllamaClient new listModels
+]
+
+{ #category : 'accessing' }
+OModelRegistry class >> modelsFetcher [
+    ^ modelsFetcher
+]
+
+{ #category : 'accessing' }
+OModelRegistry class >> modelsFetcher: aBlock [
+    modelsFetcher := aBlock
+]
+
+{ #category : 'accessing' }
 OModelRegistry class >> refresh [
 
   current := self new.
   current rebuild.
   ^ current
+]
+
+{ #category : 'accessing' }
+OModelRegistry class >> reset [
+<script>
+    current := nil
 ]
 
 { #category : 'accessing' }
@@ -99,39 +125,45 @@ OModelRegistry >> prettifiedTokenForLabel: aString [
 
 { #category : 'building' }
 OModelRegistry >> rebuild [
+| knownSpecs |
+        byFullName := Dictionary new.
+        byLabel := Dictionary new.
+        knownSpecs := Dictionary new.
 
-	byFullName := Dictionary new.
-	byLabel := Dictionary new.
-
-	(Pragma allNamed: #ollamaModel:tag:label:) do: [ :p |
-			| fam tag label spec full |
-			fam := p arguments first.
-			tag := p arguments second.
-			label := p arguments third.
-			spec := OModelSpec family: fam tag: tag label: label.
-			full := spec fullName.
-			byFullName at: full put: spec.
-			byLabel at: label put: spec ]. "Add any models reported by a running Ollama server"
-	[
-		| resp models name tokens spec full |
-		resp := OllamaClient new listModels.
-		models := resp at: #models ifAbsent: [ resp at: 'models' ifAbsent: [ #(  ) ] ].
-		models do: [ :m |
-				name := m at: #name ifAbsent: [ m at: 'name' ifAbsent: [ nil ] ].
-				name ifNotNil: [
-						tokens := name findTokens: ':'.
-						tokens ifEmpty: [ tokens := { name } ].
-						spec := OModelSpec
-							        family: tokens first
-							        tag: (tokens size > 1
-									         ifTrue: [ tokens second ]
-									         ifFalse: [ nil ])
-							        label: (self userFriendlyLabelForModelNamed: name).
-						full := spec fullName.
-						byFullName at: full ifAbsentPut: [ spec ].
-						byLabel at: spec label ifAbsentPut: [ spec ] ] ] ]
-		on: Error
-		do: [ :ex | "ignore if server unreachable" ]
+        (Pragma allNamed: #ollamaModel:tag:label:) do: [ :p |
+                        | fam tag label spec full |
+                        fam := p arguments first.
+                        tag := p arguments second.
+                        label := p arguments third.
+                        spec := OModelSpec family: fam tag: tag label: label.
+                        full := spec fullName.
+                        knownSpecs at: full put: spec ]. "Collect friendly labels defined via pragmas"
+        [
+                | resp models name spec |
+                resp := self class fetchModelsResponse.
+                models := resp at: #models ifAbsent: [ resp at: 'models' ifAbsent: [ #(  ) ] ].
+                models do: [ :m |
+                                name := m at: #name ifAbsent: [ m at: 'name' ifAbsent: [ nil ] ].
+                                name ifNotNil: [
+                                                spec := knownSpecs at: name ifAbsent: [
+                                                                | tokens tag |
+                                                                tokens := name findTokens: ':'.
+                                                                tokens ifEmpty: [ tokens := { name } ].
+                                                                tag := tokens size > 1
+                                                                                ifTrue: [
+                                                                                                String streamContents: [ :stream |
+                                                                                                                (tokens allButFirst)
+                                                                                                                        withIndexDo: [ :token :index |
+                                                                                                                                index > 1 ifTrue: [ stream nextPut: $: ].
+                                                                                                                                stream nextPutAll: token ] ] ]
+                                                                                ifFalse: [ nil ].
+                                                                OModelSpec
+                                                                        family: tokens first
+                                                                        tag: tag
+                                                                        label: (self userFriendlyLabelForModelNamed: name) ].
+                                                self addSpec: spec ] ] ]
+                on: Error
+                do: [ :ex | "ignore if server unreachable" ]
 ]
 
 { #category : 'building' }
