@@ -178,6 +178,18 @@ CopilotSettings class >> host: aString [
 ]
 
 { #category : 'accessing' }
+CopilotSettings class >> isCopilotEngineSelected [
+    "Check if the current completion engine is the copilot engine"
+    ^ [ 
+        | currentEngine |
+        currentEngine := RubSmalltalkEditor completionEngineClass.
+        currentEngine notNil and: [ 
+            currentEngine name = 'CoCompletionEnginePharoCopilot' or: [
+                currentEngine name includesSubstring: 'Copilot' ] ]
+    ] on: Error do: [ false ]
+]
+
+{ #category : 'accessing' }
 CopilotSettings class >> modelName [
 
 	^ ModelName ifNil: [ ModelName := OllamaClient defaultModelFullName ]
@@ -208,13 +220,18 @@ CopilotSettings class >> port: aNumber [
 CopilotSettings class >> settingsOn: aBuilder [
 
 	<systemsettings>
-	(aBuilder setting: #Copilot)
+	
+	"Only show copilot settings if copilot engine is selected"
+	self isCopilotEngineSelected ifFalse: [ ^ self ].
+	
+	(aBuilder setting: #CopilotSettings)
 		target: self;
 		parentName: #codeBrowsing;
 		selector: #copilotEnabled;
 		default: true;
 		iconName: #smallConfiguration;
-		description: 'Enable Copilot inline suggestions and configure its backend.';
+		label: 'Copilot';
+		description: 'Configure Pharo Copilot AI completion settings.';
 		with: [
 				(aBuilder pickOne: #provider)
 					order: -1;
@@ -232,7 +249,6 @@ CopilotSettings class >> settingsOn: aBuilder [
 					default: self modelName;
 					domainValues: self availableModelNames.
 
-
 				(aBuilder setting: #host)
 					order: 1;
 					label: 'Server host';
@@ -249,7 +265,6 @@ CopilotSettings class >> settingsOn: aBuilder [
 					setSelector: #port:;
 					default: self port.
 
-
 				(aBuilder pickOne: #fimTemplateOption)
 					label: 'FIM template source';
 					target: self;
@@ -258,19 +273,27 @@ CopilotSettings class >> settingsOn: aBuilder [
 					default: self fimTemplateOption;
 					domainValues: self availableFimTemplateOptions.
 					
-					 (aBuilder setting: #fimTemplate)
-                                        label: 'FIM template';
-                                        target: self;
-                                        getSelector: #fimTemplate;
-                                        setSelector: #fimTemplate:;
-                                        default: self fimTemplate;
-                                        description: 'Inline template used when the source is set to "Inline (edit below)".'.
+				(aBuilder setting: #fimTemplate)
+					label: 'FIM template';
+					target: self;
+					getSelector: #fimTemplate;
+					setSelector: #fimTemplate:;
+					default: self fimTemplate;
+					description: 'Inline template used when the source is set to "Inline (edit below)".'.
 
-                                (aBuilder setting: #customFimTemplateFilePath)
-                                        label: 'Custom FIM template file';
-                                        target: self;
-                                        getSelector: #customFimTemplateFilePath;
-                                        setSelector: #customFimTemplateFilePath:;
-                                        default: self customFimTemplateFilePath;
-                                        description: 'Used when the source is set to "Custom template file". The file is created automatically if it does not exist.'. ]
+				(aBuilder setting: #customFimTemplateFilePath)
+					label: 'Custom FIM template file';
+					target: self;
+					getSelector: #customFimTemplateFilePath;
+					setSelector: #customFimTemplateFilePath:;
+					default: self customFimTemplateFilePath;
+					description: 'Used when the source is set to "Custom template file". The file is created automatically if it does not exist.'. ]
+]
+
+{ #category : 'accessing' }
+CopilotSettings class >> shouldShowDetailedSettings [
+    "Show detailed settings if copilot is enabled"
+    
+    ^ self copilotEnabled
+
 ]
