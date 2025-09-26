@@ -35,10 +35,10 @@ OModelRegistry class >> current [
 { #category : 'accessing' }
 OModelRegistry class >> fetchModelsResponse [
 
-    | fetcher |
-    fetcher := self modelsFetcher.
-    fetcher ifNotNil: [ ^ fetcher value ].
-    ^ OllamaClient new listModels
+    | client |
+    client := CopilotSettings newOllamaClient.
+    (client respondsTo: #listModels) ifFalse: [ ^ Dictionary new ].
+    ^ client listModels
 ]
 
 { #category : 'accessing' }
