@@ -27,3 +27,8 @@ OModelCatalog class >> codellama_7b [
 OModelCatalog class >> codellama_7b_code [
   <ollamaModel: 'codellama' tag: '7b-code' label: 'Code Llama 7B Code'>
 ]
+
+{ #category : 'private - definitions' }
+OModelCatalog class >> pharoCoder_15b_fim_f16_latest [
+  <ollamaModel: 'pharo-coder-1.5b-fim-f16.gguf' tag: 'latest' label: 'Pharo Coder 1.5B FIM F16'>
+]

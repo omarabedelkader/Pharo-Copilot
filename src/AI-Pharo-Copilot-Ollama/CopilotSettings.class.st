@@ -14,11 +14,67 @@ Class {
 		'FimTemplateOption',
 		'CustomFimTemplateFile',
 		'ModelMetadata',
-		'OllamaClientFactory'
+		'OllamaClientFactory',
+		'AutoInstallModelScriptEnabled'
 	],
 	#category : 'AI-Pharo-Copilot-Ollama',
 	#package : 'AI-Pharo-Copilot-Ollama'
 }
+
+{ #category : 'accessing' }
+CopilotSettings class >> attemptAutoInstallForModelNamed: modelName usingInitialResponse: response [
+
+    (self shouldAutoInstallModelNamed: modelName) ifFalse: [ ^ false ].
+    CoCopilotLogger
+        logBackEndEvent: 'Attempting auto-install for missing Ollama model'
+        details: (Dictionary new
+            at: #model put: modelName;
+            at: #availableModelsBefore put: (self modelNamesFromResponse: response);
+            yourself).
+    (self installModelNamed: modelName) ifFalse: [ ^ false ].
+    [
+        | refreshedResponse refreshedModels |
+        refreshedResponse := self newOllamaClient listModels.
+        refreshedModels := self modelNamesFromResponse: refreshedResponse.
+        (refreshedModels includes: modelName) ifTrue: [
+            CoCopilotLogger
+                logBackEndEvent: 'Auto-install detected newly available Ollama model'
+                details: (Dictionary new
+                    at: #model put: modelName;
+                    at: #availableModelsAfter put: refreshedModels;
+                    yourself).
+            [ OModelRegistry refresh ] on: Error do: [ :ignored | ].
+            ^ true
+        ].
+        CoCopilotLogger
+            logBackEndEvent: 'Auto-install did not expose expected Ollama model'
+            details: (Dictionary new
+                at: #model put: modelName;
+                at: #availableModelsAfter put: refreshedModels;
+                yourself).
+    ] on: Error do: [ :ex |
+        CoCopilotLogger
+            logError: 'Failed to refresh Ollama models after auto-install'
+            origin: #CopilotSettings
+            exception: ex
+            payload: (Dictionary new
+                at: #model put: modelName;
+                yourself).
+    ].
+    ^ false
+]
+
+{ #category : 'accessing' }
+CopilotSettings class >> autoInstallModelScriptEnabled [
+
+    ^ AutoInstallModelScriptEnabled ifNil: [ AutoInstallModelScriptEnabled := true ]
+]
+
+{ #category : 'accessing' }
+CopilotSettings class >> autoInstallModelScriptEnabled: aBoolean [
+
+    AutoInstallModelScriptEnabled := aBoolean.
+]
 
 { #category : 'accessing' }
 CopilotSettings class >> availableFimTemplateOptions [
@@ -301,6 +357,36 @@ self clearCachedModelMetadata.
 ]
 
 { #category : 'accessing' }
+CopilotSettings class >> installModelNamed: modelName [
+
+    | client |
+    [
+        client := self newOllamaClient.
+        CoCopilotLogger
+            logBackEndEvent: 'Invoking Ollama model install script'
+            details: (Dictionary new
+                at: #model put: modelName;
+                yourself).
+        client pullModelNamed: modelName.
+        CoCopilotLogger
+            logBackEndEvent: 'Ollama model install script completed'
+            details: (Dictionary new
+                at: #model put: modelName;
+                yourself).
+        ^ true
+    ] on: Error do: [ :ex |
+        CoCopilotLogger
+            logError: 'Failed to invoke Ollama model install script'
+            origin: #CopilotSettings
+            exception: ex
+            payload: (Dictionary new
+                at: #model put: modelName;
+                yourself).
+        ^ false
+    ]
+]
+
+{ #category : 'accessing' }
 CopilotSettings class >> isCopilotEngineSelected [
     "Check if the current completion engine is the copilot engine"
     ^ [ 
@@ -509,7 +595,9 @@ CopilotSettings class >> restoreSettingsFromSnapshot: aDictionary [
 	FimTemplateOption := aDictionary at: #FimTemplateOption ifAbsent: [ nil ].
 	CustomFimTemplateFile := aDictionary at: #CustomFimTemplateFile ifAbsent: [ nil ].
 	ModelMetadata := aDictionary at: #ModelMetadata ifAbsent: [ nil ].
-	OllamaClientFactory := aDictionary at: #OllamaClientFactory ifAbsent: [ nil ]
+	OllamaClientFactory := aDictionary at: #OllamaClientFactory ifAbsent: [ nil ].
+	    AutoInstallModelScriptEnabled := aDictionary at: #AutoInstallModelScriptEnabled ifAbsent: [ nil ]
+
 ]
 
 { #category : 'settings' }
@@ -543,6 +631,16 @@ CopilotSettings class >> settingsOn: aBuilder [
 					setSelector: #modelName:;
 					default: self modelName;
 					domainValues: self availableModelNames.
+					
+				(aBuilder setting: #autoInstallModelScriptEnabled)
+                                        order: 0.4;
+                                        label: 'Auto-install Pharo coder model';
+                                        target: self;
+                                        getSelector: #autoInstallModelScriptEnabled;
+                                        setSelector: #autoInstallModelScriptEnabled:;
+                                        default: self autoInstallModelScriptEnabled;
+                                        description:
+                                                'When enabled, Pharo Copilot automatically runs the installation script if the "pharo-coder-1.5b-fim-f16.gguf:latest" model is missing.'.
 
 				(aBuilder setting: #modelTemplate)
 					order: 0.5;
@@ -629,6 +727,14 @@ CopilotSettings class >> settingsSnapshot [
         at: #ModelMetadata put: ModelMetadata;
         at: #OllamaClientFactory put: OllamaClientFactory;
         yourself
+]
+
+{ #category : 'accessing' }
+CopilotSettings class >> shouldAutoInstallModelNamed: modelName [
+
+    (self autoInstallModelScriptEnabled) ifFalse: [ ^ false ].
+    modelName ifNil: [ ^ false ].
+    ^ modelName = 'pharo-coder-1.5b-fim-f16.gguf:latest'
 ]
 
 { #category : 'accessing' }

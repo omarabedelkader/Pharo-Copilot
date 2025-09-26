@@ -9,7 +9,11 @@ Class {
 		'responseBlock',
 		'callCount',
 		'lastRequestedModel',
-		'modelsResponse'
+		'modelsResponse',
+		'pullBlock',
+		'pullCount',
+		'lastPulledModel',
+		'modelsResponses'
 	],
 	#category : 'AI-Pharo-Copilot-Tests-Mock',
 	#package : 'AI-Pharo-Copilot-Tests',
@@ -31,13 +35,39 @@ OllamaClientStub >> defaultModelsResponse [
 ]
 
 { #category : 'accessing' }
+OllamaClientStub >> lastPulledModel [
+
+    ^ lastPulledModel
+]
+
+{ #category : 'accessing' }
 OllamaClientStub >> lastRequestedModel [
     ^ lastRequestedModel
 ]
 
 { #category : 'accessing' }
 OllamaClientStub >> listModels [
-    ^ modelsResponse ifNil: [ self defaultModelsResponse ]
+(modelsResponses notNil and: [ modelsResponses isEmpty not ]) ifTrue: [
+        ^ modelsResponses removeFirst
+    ].
+	^ modelsResponse ifNil: [ self defaultModelsResponse ]
+]
+
+{ #category : 'accessing' }
+OllamaClientStub >> pullCount [
+
+    ^ pullCount ifNil: [ 0 ]
+]
+
+{ #category : 'accessing' }
+OllamaClientStub >> pullModelNamed: aModelName [
+
+    lastPulledModel := aModelName.
+    pullCount := self pullCount + 1.
+    pullBlock ifNotNil: [ ^ pullBlock value: aModelName ].
+    ^ Dictionary new
+        at: #status put: 'ok';
+        yourself
 ]
 
 { #category : 'accessing' }
@@ -50,7 +80,23 @@ OllamaClientStub >> showModelNamed: aModelName [
 
 { #category : 'accessing' }
 OllamaClientStub >> withModelsResponse: anObject [
-    modelsResponse := anObject.
+
+	modelsResponse := anObject.
+modelsResponses := nil.
+    ^ self
+]
+
+{ #category : 'accessing' }
+OllamaClientStub >> withModelsResponses: aCollection [
+    modelsResponses := OrderedCollection withAll: aCollection.
+    modelsResponse := nil.
+^self
+]
+
+{ #category : 'accessing' }
+OllamaClientStub >> withPullBlock: aBlockClosure [
+
+    pullBlock := aBlockClosure.
     ^ self
 ]
 

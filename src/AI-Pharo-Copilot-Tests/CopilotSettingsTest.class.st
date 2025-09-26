@@ -6,6 +6,47 @@ Class {
 }
 
 { #category : 'tests' }
+CopilotSettingsTest >> testAutoInstallRunsWhenPharoCoderMissing [
+
+    | stub modelName missingResponse availableResponse |
+    modelName := 'pharo-coder-1.5b-fim-f16.gguf:latest'.
+    missingResponse := Dictionary new at: #models put: #(); yourself.
+    availableResponse := Dictionary new
+        at: #models put: { Dictionary new
+            at: #name put: modelName;
+            yourself };
+        yourself.
+    CopilotSettings withDefaultSettingsDo: [
+        stub := OllamaClientStub new.
+        stub withModelsResponses: { missingResponse. availableResponse }.
+        CopilotSettings ollamaClientFactory: [ stub ].
+        CopilotSettings modelName: modelName.
+        CopilotSettings autoInstallModelScriptEnabled: true.
+        self assert: CopilotSettings ensureSelectedModelAvailable.
+        self assert: stub pullCount equals: 1.
+        self assert: stub lastPulledModel equals: modelName.
+    ]
+]
+
+{ #category : 'tests' }
+CopilotSettingsTest >> testAutoInstallToggleDisablesScript [
+
+    | stub modelName missingResponse |
+    modelName := 'pharo-coder-1.5b-fim-f16.gguf:latest'.
+    missingResponse := Dictionary new at: #models put: #(); yourself.
+    CopilotSettings withDefaultSettingsDo: [
+        stub := OllamaClientStub new.
+        stub withModelsResponse: missingResponse.
+        CopilotSettings ollamaClientFactory: [ stub ].
+        CopilotSettings modelName: modelName.
+        CopilotSettings autoInstallModelScriptEnabled: false.
+        self deny: CopilotSettings ensureSelectedModelAvailable.
+        self assert: stub pullCount equals: 0.
+        self assert: stub lastPulledModel isNil.
+    ]
+]
+
+{ #category : 'tests' }
 CopilotSettingsTest >> testAvailableFimTemplateOptionsIncludesInlineAndCustom [
     | options inline custom |
     options := CopilotSettings availableFimTemplateOptions.
