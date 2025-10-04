@@ -1,6 +1,6 @@
 Class {
 	#name : 'CopilotSettingsTest',
-	#superclass : 'TestCase',
+	#superclass : 'CopilotMockModelTestCase',
 	#category : 'AI-Pharo-Copilot-Tests',
 	#package : 'AI-Pharo-Copilot-Tests'
 }
@@ -65,7 +65,7 @@ CopilotSettingsTest >> testAvailableModelName [
 	| domain |
 	domain := CopilotSettings availableModelNames.
 	self assert: domain size > 0.
-	self assert: (domain anySatisfy: [ :assoc | assoc key = 'Code Llama 7B' and: [ assoc value = 'codellama:7b' ] ]).
+	self assert: (domain anySatisfy: [ :assoc | assoc key = OTestModelSupport mockModelLabel and: [ assoc value = OTestModelSupport mockModelName ] ]).
 ]
 
 { #category : 'tests' }

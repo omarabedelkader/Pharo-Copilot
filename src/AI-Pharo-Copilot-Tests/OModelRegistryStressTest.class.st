@@ -1,6 +1,6 @@
 Class {
 	#name : 'OModelRegistryStressTest',
-	#superclass : 'TestCase',
+	#superclass : 'CopilotMockModelTestCase',
 	#category : 'AI-Pharo-Copilot-Tests',
 	#package : 'AI-Pharo-Copilot-Tests'
 }
@@ -56,15 +56,12 @@ OModelRegistryStressTest >> testRegistryWithDuplicateSpecs [
 
 { #category : 'tests' }
 OModelRegistryStressTest >> testSpecLookupPerformance [
+
 	| registry lookupTime |
-	registry := OModelRegistry current.
-	
-	"Measure lookup performance"
+	registry := OModelRegistry current. "Measure lookup performance"
 	lookupTime := Time millisecondsToRun: [
-		1000 timesRepeat: [
-			registry specByFullName: 'codellama:7b'.
-			registry specByLabel: 'Code Llama 7B' ] ].
-	
-	"Should be fast (less than 100ms for 2000 lookups)"
+			              1000 timesRepeat: [
+					              registry specByFullName: OTestModelSupport mockModelName.
+					              registry specByLabel: OTestModelSupport mockModelLabel] ]. "Should be fast (less than 100ms for 2000 lookups)"
 	self assert: lookupTime < 100
 ]

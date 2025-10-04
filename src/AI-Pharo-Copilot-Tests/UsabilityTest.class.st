@@ -1,6 +1,6 @@
 Class {
 	#name : 'UsabilityTest',
-	#superclass : 'TestCase',
+	#superclass : 'CopilotMockModelTestCase',
 	#category : 'AI-Pharo-Copilot-Tests',
 	#package : 'AI-Pharo-Copilot-Tests'
 }
@@ -77,16 +77,10 @@ UsabilityTest >> testEvaluatorReportIsReadable [
 
 { #category : 'tests' }
 UsabilityTest >> testModelSpecDisplayIsIntuitive [
-	| spec |
-	spec := OModelSpec family: 'codellama' tag: '7b' label: 'Code Llama 7B'.
-	
-	"Full name should be technical identifier"
-	self assert: spec fullName equals: 'codellama:7b'.
-	
-	"Label should be human-readable"
-	self assert: spec label equals: 'Code Llama 7B'.
-	
-	"Label should be more descriptive than full name"
-	self assert: spec label size > spec fullName size
 
+	| spec |
+	spec := OModelSpec family: 'mock' tag: 'model' label: 'Mock Model Friendly'. "Full name should be technical identifier"
+	self assert: spec fullName equals: 'mock:model'. "Label should be human-readable"
+	self assert: spec label equals: 'Mock Model Friendly'. "Label should be more descriptive than full name"
+	self assert: spec label size > spec fullName size
 ]

@@ -1,6 +1,6 @@
 Class {
 	#name : 'OllamaClientTest',
-	#superclass : 'TestCase',
+	#superclass : 'CopilotMockModelTestCase',
 	#category : 'AI-Pharo-Copilot-Tests',
 	#package : 'AI-Pharo-Copilot-Tests'
 }
@@ -206,13 +206,13 @@ OllamaClientTest >> testGenerateUsesCorrectEndpoint [
 
 { #category : 'tests' }
 OllamaClientTest >> testInitializeUsesCopilotSettingsModel [
-    | old client |
-    old := CopilotSettings modelName.
-    [
-        CopilotSettings modelName: 'codellama:7b'.
-        client := OllamaClient new.
-        self assert: (client instVarNamed: 'modelSpec') fullName equals: 'codellama:7b'.
-    ] ensure: [ CopilotSettings modelName: old ].
+
+	| old client |
+	old := CopilotSettings modelName.
+	[
+		CopilotSettings modelName: OTestModelSupport mockModelName.
+		client := OllamaClient new.
+		self assert: (client instVarNamed: 'modelSpec') fullName equals: OTestModelSupport mockModelName ] ensure: [ CopilotSettings modelName: old ]
 ]
 
 { #category : 'tests' }
@@ -228,14 +228,15 @@ OllamaClientTest >> testListModelsUsesApiTags [
 
 { #category : 'tests' }
 OllamaClientTest >> testNormalizeResponseHandlesComplexDictionary [
+
 	| client response result |
 	client := OllamaClient new.
 	response := Dictionary new
-		at: #model put: 'codellama';
-		at: #response put: 'actual content';
-		at: #done put: true;
-		yourself.
-		
+		            at: #model put:  OTestModelSupport mockModelName;
+		            at: #response put: 'actual content';
+		            at: #done put: true;
+		            yourself.
+
 	result := client normalizeResponse: response.
 	self assert: result equals: 'actual content'
 ]
@@ -375,18 +376,19 @@ OllamaClientTest >> testOptionsSetterStoresDictionary [
 
 { #category : 'tests' }
 OllamaClientTest >> testShowModelUsesApiShow [
-    | client mock response |
-    client := OllamaClient new.
-    mock := OAHttpTransportMockExtended new.
-    response := Dictionary new
-        at: #template put: 'value';
-        yourself.
-    mock mockResponse: response.
-    client instVarNamed: 'transport' put: mock.
 
-    self assert: (client showModelNamed: 'codellama:7b') identicalTo: response.
-    self assert: mock lastPath equals: 'api/show'.
-    self assert: (mock lastBody at: #model) equals: 'codellama:7b'.
+	| client mock response |
+	client := OllamaClient new.
+	mock := OAHttpTransportMockExtended new.
+	response := Dictionary new
+		            at: #template put: 'value';
+		            yourself.
+	mock mockResponse: response.
+	client instVarNamed: 'transport' put: mock.
+
+	self assert: (client showModelNamed: OTestModelSupport mockModelName) identicalTo: response.
+	self assert: mock lastPath equals: 'api/show'.
+	self assert: (mock lastBody at: #model) equals: OTestModelSupport mockModelName
 ]
 
 { #category : 'tests' }

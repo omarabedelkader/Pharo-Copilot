@@ -1,6 +1,6 @@
 Class {
 	#name : 'OModelRegistryTest',
-	#superclass : 'TestCase',
+	#superclass : 'CopilotMockModelTestCase',
 	#category : 'AI-Pharo-Copilot-Tests',
 	#package : 'AI-Pharo-Copilot-Tests'
 }
@@ -8,15 +8,7 @@ Class {
 { #category : 'tests' }
 OModelRegistryTest >> defaultModelsResponse [
 
-    ^ Dictionary new
-            at: #models put: {
-                    Dictionary new
-                            at: #name put: 'codellama:7b';
-                            yourself.
-                    Dictionary new
-                            at: #name put: 'codellama:13b';
-                            yourself };
-            yourself
+^ OTestModelSupport mockModelsResponse
 ]
 
 { #category : 'tests' }
@@ -69,13 +61,13 @@ OModelRegistryTest >> testCurrentReturnsValidRegistry [
 ]
 
 { #category : 'tests' }
-OModelRegistryTest >> testDomainValuesForSettings [ 
+OModelRegistryTest >> testDomainValuesForSettings [
 
-    | registry domain |
-    registry := OModelRegistry build.
-    domain := registry domainValuesForSettings.
-    self assert: domain size > 0.
- self assert: (domain anySatisfy: [:assoc | assoc key = 'Code Llama 7B' and: [assoc value = 'codellama:7b']]).
+	| registry domain |
+	registry := OModelRegistry build.
+	domain := registry domainValuesForSettings.
+	self assert: domain size > 0.
+	self assert: (domain anySatisfy: [:assoc | assoc key = OTestModelSupport mockModelLabel and: [assoc value = OTestModelSupport mockModelName]]).
 ]
 
 { #category : 'tests' }
@@ -140,10 +132,10 @@ OModelRegistryTest >> testSpecLookupByFullNameAndLabel [
 
 	| registry spec |
 	registry := OModelRegistry build.
-	spec := registry specByFullName: 'codellama:7b'.
+	spec := registry specByFullName: OTestModelSupport mockModelName.
 	self assert: spec notNil.
-	self assert: spec label equals: 'Code Llama 7B'.
-    self assert: spec notNil.
+	self assert: spec label equals: OTestModelSupport mockModelLabel.
+	self assert: spec notNil
 ]
 
 { #category : 'tests' }

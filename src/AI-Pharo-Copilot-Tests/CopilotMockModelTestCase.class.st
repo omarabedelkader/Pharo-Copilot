@@ -1,0 +1,16 @@
+Class {
+	#name : 'CopilotMockModelTestCase',
+	#superclass : 'TestCase',
+	#instVars : [
+		'mockContext'
+	],
+	#category : 'AI-Pharo-Copilot-Tests',
+	#package : 'AI-Pharo-Copilot-Tests'
+}
+
+{ #category : 'running' }
+CopilotMockModelTestCase >> setUp [
+
+    super setUp.
+    mockContext := OTestModelSupport beginMockModels.
+]

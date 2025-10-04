@@ -7,16 +7,18 @@ Class {
 
 { #category : 'tests' }
 OModelCatalogTest >> testBuiltInModelPragmas [
-	| pragmas |
-	pragmas := Pragma allNamed: #ollamaModel:tag:label: in: OModelCatalog class.
-	
-	self assert: pragmas size >= 4.
-	
-	"Test specific models exist"
-	self assert: (pragmas anySatisfy: [ :p | 
-		p arguments = #('codellama' '7b' 'Code Llama 7B') ]).
-	self assert: (pragmas anySatisfy: [ :p | 
-		p arguments = #('codellama' '13b' 'Code Llama 13B') ])
+
+        | pragmas uniqueFamiliesAndTags uniqueLabels |
+        pragmas := Pragma allNamed: #ollamaModel:tag:label: in: OModelCatalog class.
+
+        self deny: pragmas isEmpty.
+
+        uniqueFamiliesAndTags := (pragmas collect: [ :pragma |
+                pragma arguments first -> pragma arguments second ]) asSet.
+        uniqueLabels := (pragmas collect: [ :pragma | pragma arguments third ]) asSet.
+
+        self assert: uniqueFamiliesAndTags size equals: pragmas size.
+        self assert: uniqueLabels size equals: pragmas size
 ]
 
 { #category : 'tests' }

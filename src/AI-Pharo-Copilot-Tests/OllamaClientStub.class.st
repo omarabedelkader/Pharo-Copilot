@@ -27,11 +27,12 @@ OllamaClientStub >> callCount [
 
 { #category : 'accessing' }
 OllamaClientStub >> defaultModelsResponse [
-    ^ Dictionary new
-        at: #models put: { Dictionary new
-            at: #name put: (CopilotSettings modelName ifNil: [ 'codellama:7b-code' ]);
-            yourself };
-        yourself
+
+	^ Dictionary new
+		  at: #models put: { (Dictionary new
+				   at: #name put: (CopilotSettings modelName ifNil: [OTestModelSupport mockModelName ]);
+				   yourself) };
+		  yourself
 ]
 
 { #category : 'accessing' }
