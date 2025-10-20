@@ -14,3 +14,11 @@ CopilotMockModelTestCase >> setUp [
     super setUp.
     mockContext := OTestModelSupport beginMockModels.
 ]
+
+{ #category : 'running' }
+CopilotMockModelTestCase >> tearDown [
+
+    [ super tearDown ] ensure: [
+        OTestModelSupport endMockModels: mockContext.
+        mockContext := nil ].
+]
