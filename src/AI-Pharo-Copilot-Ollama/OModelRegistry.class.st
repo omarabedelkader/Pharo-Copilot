@@ -140,11 +140,13 @@ OModelRegistry >> rebuild [
 			spec := OModelSpec family: fam tag: tag label: label.
 			full := spec fullName.
 			knownSpecs at: full put: spec ]. "Collect friendly labels defined via pragmas"
-		        nullModelName := OllamaClient nullModelFullName.
-        nullSpec := knownSpecs
-                at: nullModelName
-                ifAbsent: [ OModelSpec family: nullModelName tag: nil label: 'Pharo Copilot (not configured)' ].
-        nullSpec ifNotNil: [ self addSpec: nullSpec ].
+	nullModelName := OllamaClient nullModelFullName.
+	nullSpec := knownSpecs
+		            at: nullModelName
+		            ifAbsent: [ OModelSpec family: nullModelName tag: nil label: 'Pharo Copilot (not configured)' ].
+	        nullSpec ifNotNil: [
+                nullSpec label: 'Pharo Copilot (not configured)'.
+                self addSpec: nullSpec ].
 	[
 		| resp models name spec |
 		resp := self class fetchModelsResponse.
