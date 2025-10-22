@@ -152,12 +152,18 @@ CoCopilotLogger class >> instVarNamed: aStringOrSymbol [
 { #category : 'class initialization' }
 CoCopilotLogger class >> instVarNamed: aStringOrSymbol put: aValue [
 
-        | name |
-        name := aStringOrSymbol asSymbol.
-        name = #logFileReference ifTrue: [ logFileReference := aValue. ^ aValue ].
-        name = #logsDirectoryReference ifTrue: [ logsDirectoryReference := aValue. ^ aValue ].
-        name = #evaluationLogFileReference ifTrue: [ evaluationLogFileReference := aValue. ^ aValue ].
-        ^ super instVarNamed: aStringOrSymbol put: aValue
+	| name |
+	name := aStringOrSymbol asSymbol.
+	name = #logFileReference ifTrue: [
+			logFileReference := aValue.
+			^ aValue ].
+	name = #logsDirectoryReference ifTrue: [
+			logsDirectoryReference := aValue.
+			^ aValue ].
+	name = #evaluationLogFileReference ifTrue: [
+			evaluationLogFileReference := aValue.
+			^ aValue ].
+	^ super instVarNamed: name put: aValue
 ]
 
 { #category : 'class initialization' }
