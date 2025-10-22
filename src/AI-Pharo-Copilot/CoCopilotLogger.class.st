@@ -29,48 +29,60 @@ CoCopilotLogger class >> appendDetailAssociation: anAssociation to: lines [
 
 { #category : 'class initialization' }
 CoCopilotLogger class >> appendLines: lines [
-    [
-        | file |
-        file := self logFileReference.
-        file ensureCreateFile.
-        file writeStreamDo: [ :stream | 
-            stream setToEnd.
-            lines do: [ :line | 
-                stream nextPutAll: line.
-                stream nextPut: Character lf ] ]
-    ] on: Error do: [ :ex | 
-        Transcript 
-            show: 'Copilot logging failed: ', ex messageText; cr ].
-
+self loggingEnabled ifFalse: [ ^ self ].
+	[
+		| file |
+		file := self logFileReference.
+		file ensureCreateFile.
+		file writeStreamDo: [ :stream |
+				stream setToEnd.
+				lines do: [ :line |
+						stream nextPutAll: line.
+						stream nextPut: Character lf ] ] ]
+		on: Error
+		do: [ :ex |
+				Transcript
+					show: 'Copilot logging failed: ' , ex messageText;
+					cr ]
 ]
 
 { #category : 'class initialization' }
-CoCopilotLogger class >> ensureEvaluationLogFileInitialized [ 
-
-        [ self evaluationLogFileReference ensureCreateFile ]
-                on: Error
-                do: [ :ex | Transcript show: 'Copilot evaluation log file could not be created: ', ex messageText; cr ]
-
+CoCopilotLogger class >> ensureEvaluationLogFileInitialized [
+self loggingEnabled ifFalse: [ ^ self ].
+	[ self evaluationLogFileReference ensureCreateFile ]
+		on: Error
+		do: [ :ex |
+				Transcript
+					show: 'Copilot evaluation log file could not be created: ' , ex messageText;
+					cr ]
 ]
 
 { #category : 'class initialization' }
 CoCopilotLogger class >> ensureLogFileInitialized [
-
-        [ self logFileReference ensureCreateFile ]
-                on: Error
-                do: [ :ex | Transcript show: 'Copilot log file could not be created: ', ex messageText; cr ]
+self loggingEnabled ifFalse: [ ^ self ].
+	[ self logFileReference ensureCreateFile ]
+		on: Error
+		do: [ :ex |
+				Transcript
+					show: 'Copilot log file could not be created: ' , ex messageText;
+					cr ]
 ]
 
 { #category : 'class initialization' }
 CoCopilotLogger class >> ensureLogsDirectory [
 
-        | directory |
-        directory := self logsDirectoryReference.
-        [ directory directory parent ensureCreateDirectory.
-                directory ensureCreateDirectory ]
-                on: Error
-                do: [ :ex | Transcript show: 'Copilot log directory could not be created: ', ex messageText; cr ].
-        ^ directory
+	| directory |
+	self loggingEnabled ifFalse: [ ^ self logsDirectoryReference ].
+	directory := self logsDirectoryReference.
+	[
+		directory directory parent ensureCreateDirectory.
+		directory ensureCreateDirectory ]
+		on: Error
+		do: [ :ex |
+				Transcript
+					show: 'Copilot log directory could not be created: ' , ex messageText;
+					cr ].
+	^ directory
 ]
 
 { #category : 'class initialization' }
@@ -166,37 +178,34 @@ CoCopilotLogger class >> logFrontEndEvent: eventName details: aDictionary [
 
 { #category : 'class initialization' }
 CoCopilotLogger class >> logSection: sectionName event: eventName details: aDictionary [
-    | timestamp lines |
-    timestamp := DateAndTime now asString.
-    lines := OrderedCollection new.
 
-    "Blank line before section"
-    lines add: ''.
+	| timestamp lines |
+	self loggingEnabled ifFalse: [ ^ self ].
+	timestamp := DateAndTime now asString.
+	lines := OrderedCollection new. "Blank line before section"
+	lines add: ''. "Header line"
+	lines add: (String streamContents: [ :stream |
+				 stream
+					 nextPutAll: '===== [';
+					 nextPutAll: sectionName;
+					 nextPutAll: '] ';
+					 nextPutAll: eventName;
+					 nextPutAll: ' @ ';
+					 nextPutAll: timestamp;
+					 nextPutAll: ' =====' ]). "Details, if any"
+	(aDictionary isNil or: [ aDictionary isEmpty ]) ifFalse: [
+			(aDictionary respondsTo: #associationsDo)
+				ifTrue: [ aDictionary associationsDo: [ :assoc | self appendDetailAssociation: assoc to: lines ] ]
+				ifFalse: [ self appendDetailAssociation: aDictionary -> '' to: lines ] ]. "Blank line after section"
+	lines add: ''.
 
-    "Header line"
-    lines add: (String streamContents: [ :stream |
-        stream
-            nextPutAll: '===== [';
-            nextPutAll: sectionName;
-            nextPutAll: '] ';
-            nextPutAll: eventName;
-            nextPutAll: ' @ ';
-            nextPutAll: timestamp;
-            nextPutAll: ' =====' ]).
+	self appendLines: lines
+]
 
-    "Details, if any"
-    (aDictionary isNil or: [ aDictionary isEmpty ])
-        ifFalse: [
-            (aDictionary respondsTo: #associationsDo)
-                ifTrue: [ aDictionary associationsDo: [ :assoc |
-                    self appendDetailAssociation: assoc to: lines ] ]
-                ifFalse: [ self appendDetailAssociation: aDictionary -> '' to: lines ] ].
+{ #category : 'class initialization' }
+CoCopilotLogger class >> loggingEnabled [
 
-    "Blank line after section"
-    lines add: ''.
-
-    self appendLines: lines
-
+    ^ CopilotSettings loggingEnabled
 ]
 
 { #category : 'class initialization' }
