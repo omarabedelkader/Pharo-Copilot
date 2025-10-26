@@ -8,7 +8,6 @@ Class {
 		'Enabled',
 		'Provider',
 		'ModelName',
-		'FimTemplate',
 		'Host',
 		'Port',
 		'ModelMetadata',
@@ -254,19 +253,17 @@ yourself) ].
 { #category : 'accessing' }
 CopilotSettings class >> fimTemplate [
 
-    ^ FimTemplate ifNil: [ FimTemplate := self defaultFimTemplate ].
+	self defaultFimTemplate
 ]
 
 { #category : 'accessing' }
-CopilotSettings class >> fimTemplate: aString [
-
-	FimTemplate := aString.
-	self fimTemplateOption: #inline.
+CopilotSettings class >> fimTemplate: ignored [
 ]
 
 { #category : 'accessing' }
 CopilotSettings class >> fimTemplateOption: aString [
-FimTemplate := aString.
+
+	"The inline FIM template is sourced from the templates repository."
 ]
 
 { #category : 'accessing' }
@@ -568,7 +565,6 @@ CopilotSettings class >> resetToDefaultSettings [
 	Enabled := nil.
 	Provider := nil.
 	ModelName := nil.
-	FimTemplate := nil.
 	Host := nil.
 	Port := nil.
 	ModelMetadata := nil.
@@ -583,7 +579,6 @@ CopilotSettings class >> restoreSettingsFromSnapshot: aDictionary [
 	Enabled := aDictionary at: #Enabled ifAbsent: [ nil ].
 	Provider := aDictionary at: #Provider ifAbsent: [ nil ].
 	ModelName := aDictionary at: #ModelName ifAbsent: [ nil ].
-	FimTemplate := aDictionary at: #FimTemplate ifAbsent: [ nil ].
 	Host := aDictionary at: #Host ifAbsent: [ nil ].
 	Port := aDictionary at: #Port ifAbsent: [ nil ].
 	ModelMetadata := aDictionary at: #ModelMetadata ifAbsent: [ nil ].
@@ -746,15 +741,7 @@ CopilotSettings class >> settingsOn: aBuilder [
 					target: self;
 					getSelector: #port;
 					setSelector: #port:;
-					default: self port.
-
-				(aBuilder setting: #fimTemplate)
-					label: 'FIM template';
-					target: self;
-					getSelector: #fimTemplate;
-					setSelector: #fimTemplate:;
-					default: self fimTemplate;
-					description: 'Template used for fill-in-the-middle prompts.'. ]
+					default: self port.]
 ]
 
 { #category : 'accessing' }
@@ -764,7 +751,6 @@ CopilotSettings class >> settingsSnapshot [
 		  at: #Enabled put: Enabled;
 		  at: #Provider put: Provider;
 		  at: #ModelName put: ModelName;
-		  at: #FimTemplate put: FimTemplate;
 		  at: #Host put: Host;
 		  at: #Port put: Port;
 		  at: #ModelMetadata put: ModelMetadata;

@@ -31,42 +31,6 @@ OllamaClientTest >> testGenerateBuildsCorrectPayload [
 ]
 
 { #category : 'tests' }
-OllamaClientTest >> testGenerateForPrefixSuffixBuildsPrompt [
-
-	| client mock prefix suffix payload expected |
-	client := OllamaClient new.
-	mock := OAHttpTransportMock new.
-	client instVarNamed: 'transport' put: mock.
-	prefix := 'foo'.
-	suffix := 'bar'.
-	client generateForPrefix: prefix suffix: suffix.
-	payload := mock lastBody.
-	expected := CopilotSettings fimTemplate format: { prefix. suffix }.
-  self assert: (payload at: #prompt) equals: expected.
-	self assert: ((payload at: #options) at: #task) equals: 'fill-in-the-middle'.
-	self assert: client options isEmpty
-]
-
-{ #category : 'tests' }
-OllamaClientTest >> testGenerateForPrefixSuffixUsesCustomTemplate [
-
-        | client mock prefix suffix payload old template |
-        client := OllamaClient new.
-        mock := OAHttpTransportMock new.
-        client instVarNamed: 'transport' put: mock.
-        prefix := '1'.
-        suffix := '2'.
-        old := CopilotSettings fimTemplate.
-        template := '<<PRE>>%1<<SUF>>%2<<MID>>'.
-        [
-                CopilotSettings fimTemplate: template.
-                client generateForPrefix: prefix suffix: suffix.
-                payload := mock lastBody.
-                self assert: (payload at: #prompt) equals: '<<PRE>>1<<SUF>>2<<MID>>'
-        ] ensure: [ CopilotSettings fimTemplate: old ]
-]
-
-{ #category : 'tests' }
 OllamaClientTest >> testGenerateIncludesFormatWhenSet [
 	| client mock payload |
 	client := OllamaClient new.

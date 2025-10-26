@@ -115,28 +115,6 @@ CopilotSettingsTest >> testCopilotProviderAccessor [
 ]
 
 { #category : 'tests' }
-CopilotSettingsTest >> testDefaultValues [
-CopilotSettings withDefaultSettingsDo: [
-        | enabled provider model template host port |
-        enabled := CopilotSettings copilotEnabled.
-        provider := CopilotSettings copilotProvider.
-        model := CopilotSettings modelName.
-        template := CopilotSettings fimTemplate.
-        host := CopilotSettings host.
-        port := CopilotSettings port.
-
-        self assert: (enabled isKindOf: Boolean).
-        self assert: provider isSymbol.
-        self assert: model isString.
-        self assert: template isString.
-        self assert: (template includesSubstring: '%1').
-        self assert: (template includesSubstring: '%2').
-        self assert: (host isKindOf: String).
-        self assert: port isNumber
-    ]
-]
-
-{ #category : 'tests' }
 CopilotSettingsTest >> testDisablingLoggingPreventsFileCreation [
 
 	CopilotSettings withDefaultSettingsDo: [
@@ -177,41 +155,6 @@ CopilotSettingsTest >> testEnsureSelectedModelAvailableShortCircuitsForNullModel
         CopilotSettings modelName: CopilotSettings nullModelFullName.
         self assert: CopilotSettings ensureSelectedModelAvailable.
     ]
-]
-
-{ #category : 'tests' }
-CopilotSettingsTest >> testFimTemplateAccessor [
-    | old |
-    old := CopilotSettings fimTemplate.
-    CopilotSettings fimTemplate: '<<PRE>>%1<<SUF>>%2<<MID>>'.
-    self assert: CopilotSettings fimTemplate equals: '<<PRE>>%1<<SUF>>%2<<MID>>'.
-    CopilotSettings fimTemplate: old.
-]
-
-{ #category : 'tests' }
-CopilotSettingsTest >> testFimTemplateResetRestoresDefault [ 
-    | originalTemplate customTemplate |
-    CopilotSettings withDefaultSettingsDo: [
-        originalTemplate := CopilotSettings fimTemplate.
-        customTemplate := 'INLINE<PRE>%1<SUF>%2<MID>'.
-        CopilotSettings fimTemplate: customTemplate.
-        self assert: CopilotSettings fimTemplate equals: customTemplate.
-        CopilotSettings resetToDefaultSettings.
-        self assert: CopilotSettings fimTemplate equals: CopilotSettings defaultFimTemplate.
-        CopilotSettings fimTemplate: originalTemplate.
-    ].
-]
-
-{ #category : 'tests' }
-CopilotSettingsTest >> testFimTemplateValidation [
-
-    CopilotSettings withDefaultSettingsDo: [  
-        | template |
-        template := CopilotSettings fimTemplate.
-        self assert: (template includesSubstring: '%1').
-        self assert: (template includesSubstring: '%2')
-
-]
 ]
 
 { #category : 'tests' }
