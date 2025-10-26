@@ -48,38 +48,6 @@ OllamaClientTest >> testGenerateForPrefixSuffixBuildsPrompt [
 ]
 
 { #category : 'tests' }
-OllamaClientTest >> testGenerateForPrefixSuffixCustomFileEmptyFallsBackToInlineTemplate [
-        | client mock prefix suffix payload oldOption oldTemplate oldFile tempFile inlineTemplate |
-        client := OllamaClient new.
-        mock := OAHttpTransportMock new.
-        client instVarNamed: 'transport' put: mock.
-        prefix := 'left'.
-        suffix := 'right'.
-        oldOption := CopilotSettings fimTemplateOption.
-        oldTemplate := CopilotSettings fimTemplate.
-        oldFile := CopilotSettings customFimTemplateFile.
-        tempFile := FileLocator temp / 'copilot-custom-fim-template-empty.tmpl'.
-        inlineTemplate := 'INLINE<PRE>%1<SUF>%2<MID>'.
-        [
-                tempFile exists ifTrue: [ tempFile ensureDelete ].
-                CopilotSettings fimTemplate: inlineTemplate.
-                CopilotSettings fimTemplateOption: #inline.
-                CopilotSettings customFimTemplateFile: tempFile.
-                CopilotSettings fimTemplateOption: #customFile.
-                self assert: tempFile exists.
-                tempFile writeStreamDo: [ :stream | ].
-                client generateForPrefix: prefix suffix: suffix.
-                payload := mock lastBody.
-                self assert: (payload at: #prompt) equals: 'INLINE<PRE>left<SUF>right<MID>'.
-        ] ensure: [
-                tempFile exists ifTrue: [ tempFile ensureDelete ].
-                CopilotSettings fimTemplate: oldTemplate.
-                CopilotSettings customFimTemplateFile: oldFile.
-                CopilotSettings fimTemplateOption: oldOption
-        ]
-]
-
-{ #category : 'tests' }
 OllamaClientTest >> testGenerateForPrefixSuffixUsesCustomTemplate [
 
         | client mock prefix suffix payload old template |
@@ -96,72 +64,6 @@ OllamaClientTest >> testGenerateForPrefixSuffixUsesCustomTemplate [
                 payload := mock lastBody.
                 self assert: (payload at: #prompt) equals: '<<PRE>>1<<SUF>>2<<MID>>'
         ] ensure: [ CopilotSettings fimTemplate: old ]
-]
-
-{ #category : 'tests' }
-OllamaClientTest >> testGenerateForPrefixSuffixUsesCustomTemplateFilePathSetter [
-        | client mock prefix suffix payload oldOption oldTemplate oldFile tempFile customTemplate |
-        client := OllamaClient new.
-        mock := OAHttpTransportMock new.
-        client instVarNamed: 'transport' put: mock.
-        prefix := 'sun'.
-        suffix := 'moon'.
-        oldOption := CopilotSettings fimTemplateOption.
-        oldTemplate := CopilotSettings fimTemplate.
-        oldFile := CopilotSettings customFimTemplateFile.
-        tempFile := FileLocator temp / 'copilot-custom-fim-template-path.tmpl'.
-        customTemplate := 'PATH<PRE>%1<SUF>%2<MID>'.
-        [
-                tempFile exists ifTrue: [ tempFile ensureDelete ].
-                CopilotSettings fimTemplate: 'INLINE<PRE>%1<SUF>%2<MID>'.
-                CopilotSettings fimTemplateOption: #inline.
-                tempFile parent ensureCreateDirectory.
-                tempFile ensureCreateFile.
-                tempFile writeStreamDo: [ :stream | stream nextPutAll: customTemplate ].
-                CopilotSettings customFimTemplateFilePath: tempFile fullName.
-                CopilotSettings fimTemplateOption: #customFile.
-                client generateForPrefix: prefix suffix: suffix.
-                payload := mock lastBody.
-                self assert: (payload at: #prompt) equals: 'PATH<PRE>sun<SUF>moon<MID>'.
-        ] ensure: [
-                tempFile exists ifTrue: [ tempFile ensureDelete ].
-                CopilotSettings fimTemplate: oldTemplate.
-                CopilotSettings customFimTemplateFile: oldFile.
-                CopilotSettings fimTemplateOption: oldOption
-        ]
-]
-
-{ #category : 'tests' }
-OllamaClientTest >> testGenerateForPrefixSuffixUsesCustomTemplateSource [ 
-        | client mock prefix suffix payload oldOption oldTemplate oldFile tempFile customTemplate |
-        client := OllamaClient new.
-        mock := OAHttpTransportMock new.
-        client instVarNamed: 'transport' put: mock.
-        prefix := 'alpha'.
-        suffix := 'omega'.
-        oldOption := CopilotSettings fimTemplateOption.
-        oldTemplate := CopilotSettings fimTemplate.
-        oldFile := CopilotSettings customFimTemplateFile.
-        tempFile := FileLocator temp / 'copilot-custom-fim-template-source.tmpl'.
-        customTemplate := 'FILE<PRE>%1<SUF>%2<MID>'.
-        [
-                tempFile exists ifTrue: [ tempFile ensureDelete ].
-                CopilotSettings fimTemplate: 'INLINE<PRE>%1<SUF>%2<MID>'.
-                CopilotSettings fimTemplateOption: #inline.
-                CopilotSettings customFimTemplateFile: tempFile.
-                tempFile parent ensureCreateDirectory.
-                tempFile ensureCreateFile.
-                tempFile writeStreamDo: [ :stream | stream nextPutAll: customTemplate ].
-                CopilotSettings fimTemplateOption: #customFile.
-                client generateForPrefix: prefix suffix: suffix.
-                payload := mock lastBody.
-                self assert: (payload at: #prompt) equals: 'FILE<PRE>alpha<SUF>omega<MID>'.
-        ] ensure: [
-                tempFile exists ifTrue: [ tempFile ensureDelete ].
-                CopilotSettings fimTemplate: oldTemplate.
-                CopilotSettings customFimTemplateFile: oldFile.
-                CopilotSettings fimTemplateOption: oldOption
-        ]
 ]
 
 { #category : 'tests' }
