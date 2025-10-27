@@ -115,38 +115,6 @@ CopilotSettings class >> copilotProvider: aSymbol [
     Provider := aSymbol.
 ]
 
-{ #category : 'accessing' }
-CopilotSettings class >> defaultFimTemplate [
-
-	    | file contents |
-    file := self ensureDefaultFimTemplateFile.
-    contents := [ file contents ] on: Error do: [ ^ self defaultFimTemplateString ].
-    (contents isNil or: [ contents isEmpty ]) ifTrue: [ ^ self defaultFimTemplateString ].
-    ^ contents
-]
-
-{ #category : 'accessing' }
-CopilotSettings class >> defaultFimTemplateFile [
-    ^ self templatesDirectory / 'inline-fim-template.tmpl'
-]
-
-{ #category : 'accessing' }
-CopilotSettings class >> defaultFimTemplateString [
-    ^ '<PRE>%1<SUF>%2<MID>'
-]
-
-{ #category : 'accessing' }
-CopilotSettings class >> ensureDefaultFimTemplateFile [
-    | file |
-    file := self defaultFimTemplateFile.
-    [ file parent ensureCreateDirectory ] on: Error do: [ :ignored | ].
-    file exists ifFalse: [
-        [ file ensureCreateFile ] on: Error do: [ :ignored | ].
-        [ file writeStreamDo: [ :stream | stream nextPutAll: self defaultFimTemplateString ] ] on: Error do: [ :ignored | ].
-    ].
-    ^ file
-]
-
 { #category : 'settings' }
 CopilotSettings class >> ensureOllamaServiceAvailable [
 
@@ -757,6 +725,17 @@ CopilotSettings class >> shouldShowDetailedSettings [
     
     ^ self copilotEnabled
 
+]
+
+{ #category : 'accessing' }
+CopilotSettings class >> templateFileForModelNamed: aModelName [
+    | modelNameValue sanitizedName baseDirectory |
+    modelNameValue := aModelName ifNil: [ self modelName ].
+    sanitizedName := self
+        sanitizedFileComponentFor: modelNameValue
+        default: 'unknown-model'.
+    baseDirectory := CoCopilotLogger logsDirectoryReference.
+    ^ (baseDirectory / sanitizedName / 'template.txt') asFileReference
 ]
 
 { #category : 'accessing' }
