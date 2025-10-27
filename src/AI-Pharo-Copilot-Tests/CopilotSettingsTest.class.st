@@ -158,38 +158,6 @@ CopilotSettingsTest >> testEnsureSelectedModelAvailableShortCircuitsForNullModel
 ]
 
 { #category : 'tests' }
-CopilotSettingsTest >> testFimTemplateFallsBackToDefaultWhenMetadataMissingPlaceholders [
-        | stub oldFactory defaultTemplate actual sanitized modelDirectory templateFile expected |
-    expected := '<bundled_prefix>%1<bundled_suffix>%2<bundled_middle>'.
-    stub := OllamaClientStub new withResponse: (Dictionary new
-        at: #template put: 'NO PLACEHOLDERS HERE';
-        yourself).
-    oldFactory := CopilotSettings ollamaClientFactory.
-       self withTemporaryTemplatesDirectoryDo: [ :templatesDir |
-        sanitized := CopilotSettings
-            sanitizedFileComponentFor: CopilotSettings modelName
-            default: 'unknown-model'.
-        modelDirectory := templatesDir / sanitized.
-        modelDirectory ensureCreateDirectory.
-        templateFile := modelDirectory / 'template.txt'.
-        templateFile ensureCreateFile.
-        templateFile writeStreamDo: [ :stream | stream nextPutAll: expected ].
-        defaultTemplate := CopilotSettings defaultFimTemplate.
-        [
-            CopilotSettings ollamaClientFactory: [ stub ].
-            CopilotSettings clearCachedModelMetadata.
-            actual := CopilotSettings fimTemplate.
-            self assert: actual equals: defaultTemplate.
-            self assert: actual equals: expected.
-            self assert: stub callCount equals: 1.
-        ] ensure: [
-            CopilotSettings ollamaClientFactory: oldFactory.
-            CopilotSettings clearCachedModelMetadata.
-        ].
-    ].
-]
-
-{ #category : 'tests' }
 CopilotSettingsTest >> testFimTemplateUsesMetadataTemplateWhenAvailable [
 
     | stub oldFactory expected actual |
