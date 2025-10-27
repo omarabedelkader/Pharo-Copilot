@@ -158,6 +158,48 @@ CopilotSettingsTest >> testEnsureSelectedModelAvailableShortCircuitsForNullModel
 ]
 
 { #category : 'tests' }
+CopilotSettingsTest >> testFimTemplateFallsBackToDefaultWhenMetadataMissingPlaceholders [
+    | stub oldFactory defaultTemplate actual |
+    stub := OllamaClientStub new withResponse: (Dictionary new
+        at: #template put: 'NO PLACEHOLDERS HERE';
+        yourself).
+    oldFactory := CopilotSettings ollamaClientFactory.
+    defaultTemplate := CopilotSettings defaultFimTemplate.
+    [
+        CopilotSettings ollamaClientFactory: [ stub ].
+        CopilotSettings clearCachedModelMetadata.
+        actual := CopilotSettings fimTemplate.
+        self assert: actual equals: defaultTemplate.
+        self assert: stub callCount equals: 1.
+    ] ensure: [
+        CopilotSettings ollamaClientFactory: oldFactory.
+        CopilotSettings clearCachedModelMetadata.
+    ].
+]
+
+{ #category : 'tests' }
+CopilotSettingsTest >> testFimTemplateUsesMetadataTemplateWhenAvailable [
+
+    | stub oldFactory expected actual |
+    expected := '<SPECIAL_PREFIX>%1<SPECIAL_SUFFIX>%2<END>'.
+    stub := OllamaClientStub new withResponse: (Dictionary new
+        at: #template put: expected;
+        yourself).
+    oldFactory := CopilotSettings ollamaClientFactory.
+    [
+        CopilotSettings ollamaClientFactory: [ stub ].
+        CopilotSettings clearCachedModelMetadata.
+        actual := CopilotSettings fimTemplate.
+        self assert: actual equals: expected.
+        self assert: stub callCount equals: 1.
+        self assert: stub lastRequestedModel equals: CopilotSettings modelName.
+    ] ensure: [
+        CopilotSettings ollamaClientFactory: oldFactory.
+        CopilotSettings clearCachedModelMetadata.
+    ].
+]
+
+{ #category : 'tests' }
 CopilotSettingsTest >> testHostAccessor [
     | old |
     old := CopilotSettings host.
