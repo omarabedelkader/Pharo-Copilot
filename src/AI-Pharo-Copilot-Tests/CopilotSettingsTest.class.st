@@ -159,21 +159,33 @@ CopilotSettingsTest >> testEnsureSelectedModelAvailableShortCircuitsForNullModel
 
 { #category : 'tests' }
 CopilotSettingsTest >> testFimTemplateFallsBackToDefaultWhenMetadataMissingPlaceholders [
-    | stub oldFactory defaultTemplate actual |
+        | stub oldFactory defaultTemplate actual sanitized modelDirectory templateFile expected |
+    expected := '<bundled_prefix>%1<bundled_suffix>%2<bundled_middle>'.
     stub := OllamaClientStub new withResponse: (Dictionary new
         at: #template put: 'NO PLACEHOLDERS HERE';
         yourself).
     oldFactory := CopilotSettings ollamaClientFactory.
-    defaultTemplate := CopilotSettings defaultFimTemplate.
-    [
-        CopilotSettings ollamaClientFactory: [ stub ].
-        CopilotSettings clearCachedModelMetadata.
-        actual := CopilotSettings fimTemplate.
-        self assert: actual equals: defaultTemplate.
-        self assert: stub callCount equals: 1.
-    ] ensure: [
-        CopilotSettings ollamaClientFactory: oldFactory.
-        CopilotSettings clearCachedModelMetadata.
+       self withTemporaryTemplatesDirectoryDo: [ :templatesDir |
+        sanitized := CopilotSettings
+            sanitizedFileComponentFor: CopilotSettings modelName
+            default: 'unknown-model'.
+        modelDirectory := templatesDir / sanitized.
+        modelDirectory ensureCreateDirectory.
+        templateFile := modelDirectory / 'template.txt'.
+        templateFile ensureCreateFile.
+        templateFile writeStreamDo: [ :stream | stream nextPutAll: expected ].
+        defaultTemplate := CopilotSettings defaultFimTemplate.
+        [
+            CopilotSettings ollamaClientFactory: [ stub ].
+            CopilotSettings clearCachedModelMetadata.
+            actual := CopilotSettings fimTemplate.
+            self assert: actual equals: defaultTemplate.
+            self assert: actual equals: expected.
+            self assert: stub callCount equals: 1.
+        ] ensure: [
+            CopilotSettings ollamaClientFactory: oldFactory.
+            CopilotSettings clearCachedModelMetadata.
+        ].
     ].
 ]
 
@@ -223,6 +235,22 @@ CopilotSettingsTest >> testMetadataStringForKeyDefaultWhenMissing [
     CopilotSettings clearCachedModelMetadata.
     value := CopilotSettings metadataStringForKey: #unknown default: 'Missing'.
     self assert: value equals: 'Missing'.
+]
+
+{ #category : 'tests' }
+CopilotSettingsTest >> testMissingDefaultFimTemplateSignalsError [
+
+    | originalLogsDir tempFs logsDir |
+    originalLogsDir := CoCopilotLogger rawLogsDirectoryReference.
+    self withTemporaryTemplatesDirectoryDo: [ :ignoredDirectory |
+        tempFs := FileSystem memory.
+        logsDir := tempFs / 'pharo-copilot' / 'logs'.
+        logsDir ensureCreateDirectory.
+        [
+            CoCopilotLogger rawLogsDirectoryReference: logsDir.
+            self should: [ CopilotSettings defaultFimTemplate ] raise: Error
+        ] ensure: [ CoCopilotLogger rawLogsDirectoryReference: originalLogsDir ]
+    ]
 ]
 
 { #category : 'tests' }
@@ -483,4 +511,18 @@ CopilotSettingsTest >> testShouldShowDetailedSettingsReflectsCopilotEnabled [
     ] ensure: [
         CopilotSettings copilotEnabled: old.
     ].
+]
+
+{ #category : 'tests' }
+CopilotSettingsTest >> withTemporaryTemplatesDirectoryDo: aBlock [ 
+
+    | tempFs templatesDir previous |
+    tempFs := FileSystem memory.
+    templatesDir := tempFs / 'pharo-copilot' / 'templates'.
+    templatesDir ensureCreateDirectory.
+    previous := CopilotSettings templatesDirectory.
+    [
+        CopilotSettings templatesDirectory: templatesDir.
+        aBlock value: templatesDir
+    ] ensure: [ CopilotSettings templatesDirectory: previous ]
 ]

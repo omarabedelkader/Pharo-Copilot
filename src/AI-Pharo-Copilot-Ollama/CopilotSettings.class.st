@@ -13,7 +13,8 @@ Class {
 		'ModelMetadata',
 		'OllamaClientFactory',
 		'AutoInstallModelScriptEnabled',
-		'LoggingEnabled'
+		'LoggingEnabled',
+		'TemplatesDirectory'
 	],
 	#category : 'AI-Pharo-Copilot-Ollama',
 	#package : 'AI-Pharo-Copilot-Ollama'
@@ -113,6 +114,26 @@ CopilotSettings class >> copilotProvider [
 CopilotSettings class >> copilotProvider: aSymbol [
 
     Provider := aSymbol.
+]
+
+{ #category : 'accessing' }
+CopilotSettings class >> defaultFimTemplate [
+
+    | template cacheFile |
+    cacheFile := self templateFileForModelNamed: self modelName.
+    template := self fimTemplateFromFile: cacheFile.
+    template ifNotNil: [
+        CoCopilotLogger
+            logBackEndEvent: 'Using cached FIM template from logs'
+            details: (Dictionary new
+                at: #model put: (self modelName ifNil: [ 'unknown-model' ]);
+                at: #source put: cacheFile pathString;
+                yourself).
+        ^ template ].
+    template := self fimTemplateFromBundledTemplates.
+    template ifNotNil: [ ^ template ].
+    self logMissingFimTemplate.
+    ^ self error: 'No fill-in-the-middle template is available for the current Copilot model.'
 ]
 
 { #category : 'settings' }
@@ -239,6 +260,56 @@ CopilotSettings class >> fimTemplate: ignored [
 ]
 
 { #category : 'accessing' }
+CopilotSettings class >> fimTemplateFromBundledTemplates [
+
+    | directory sanitizedName candidates |
+    directory := self templatesDirectory.
+    (directory exists) ifFalse: [ ^ nil ].
+    sanitizedName := self
+        sanitizedFileComponentFor: self modelName
+        default: 'unknown-model'.
+    candidates := OrderedCollection new.
+    candidates add: directory / sanitizedName / 'template.txt'.
+    candidates add: directory / 'template.txt'.
+    candidates do: [ :each |
+        | value |
+        value := self fimTemplateFromFile: each.
+        value ifNotNil: [
+            CoCopilotLogger
+                logBackEndEvent: 'Using bundled FIM template'
+                details: (Dictionary new
+                    at: #model put: (self modelName ifNil: [ 'unknown-model' ]);
+                    at: #source put: each pathString;
+                    yourself).
+            ^ value ] ].
+    ^ nil
+]
+
+{ #category : 'accessing' }
+CopilotSettings class >> fimTemplateFromFile: aFileReference [
+
+    | file contents |
+    aFileReference ifNil: [ ^ nil ].
+    file := aFileReference asFileReference.
+    (file exists and: [ file isFile ]) ifFalse: [ ^ nil ].
+    contents := [ file readStreamDo: [ :stream | stream contents ] ]
+        on: Error
+        do: [ :ex |
+            CoCopilotLogger
+                logError: 'Failed to read FIM template file'
+                origin: #CopilotSettings
+                exception: ex
+                payload: (Dictionary new
+                    at: #file put: file pathString;
+                    yourself).
+            ^ nil ].
+    (contents respondsTo: #asString) ifFalse: [ ^ nil ].
+    contents := contents asString.
+    contents isEmpty ifTrue: [ ^ nil ].
+    ^ contents
+]
+
+{ #category : 'accessing' }
 CopilotSettings class >> fimTemplateOption: aString [
 
 	"The inline FIM template is sourced from the templates repository."
@@ -303,6 +374,17 @@ CopilotSettings class >> isCopilotEngineSelected [
 CopilotSettings class >> isNullModelName: aString [
 
         ^ aString = self nullModelFullName
+]
+
+{ #category : 'accessing' }
+CopilotSettings class >> logMissingFimTemplate [
+
+    CoCopilotLogger
+        logBackEndEvent: 'Missing FIM template for model'
+        details: (Dictionary new
+            at: #model put: (self modelName ifNil: [ 'unknown-model' ]);
+            at: #templatesDirectory put: self templatesDirectory pathString;
+            yourself)
 ]
 
 { #category : 'accessing' }
@@ -548,7 +630,8 @@ CopilotSettings class >> resetToDefaultSettings [
 	ModelMetadata := nil.
 	OllamaClientFactory := nil.
 	AutoInstallModelScriptEnabled := nil.
-	LoggingEnabled := nil
+	LoggingEnabled := nil.
+	TemplatesDirectory := nil
 ]
 
 { #category : 'accessing' }
@@ -562,7 +645,8 @@ CopilotSettings class >> restoreSettingsFromSnapshot: aDictionary [
 	ModelMetadata := aDictionary at: #ModelMetadata ifAbsent: [ nil ].
 	OllamaClientFactory := aDictionary at: #OllamaClientFactory ifAbsent: [ nil ].
 	AutoInstallModelScriptEnabled := aDictionary at: #AutoInstallModelScriptEnabled ifAbsent: [ nil ].
-	LoggingEnabled := aDictionary at: #LoggingEnabled ifAbsent: [ nil ]
+	LoggingEnabled := aDictionary at: #LoggingEnabled ifAbsent: [ nil ].
+	TemplatesDirectory := aDictionary at: #TemplatesDirectory ifAbsent: [ nil ]
 ]
 
 { #category : 'accessing' }
@@ -708,6 +792,7 @@ CopilotSettings class >> settingsSnapshot [
 		  at: #OllamaClientFactory put: OllamaClientFactory;
 		  at: #AutoInstallModelScriptEnabled put: AutoInstallModelScriptEnabled;
 		  at: #LoggingEnabled put: LoggingEnabled;
+		at: #TemplatesDirectory put: TemplatesDirectory;
 		  yourself
 ]
 
@@ -740,7 +825,14 @@ CopilotSettings class >> templateFileForModelNamed: aModelName [
 
 { #category : 'accessing' }
 CopilotSettings class >> templatesDirectory [
-    ^ (FileLocator imageDirectory / 'pharo-copilot' / 'templates') asFileReference
+    ^ TemplatesDirectory ifNil: [
+        TemplatesDirectory := (FileLocator imageDirectory / 'pharo-copilot' / 'templates') asFileReference ]
+]
+
+{ #category : 'accessing' }
+CopilotSettings class >> templatesDirectory: aFileReference [
+
+    TemplatesDirectory := aFileReference asFileReference
 ]
 
 { #category : 'accessing' }
