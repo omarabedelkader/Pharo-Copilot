@@ -713,7 +713,6 @@ CopilotSettings class >> settingsOn: aBuilder [
 	"Only show copilot settings if copilot engine is selected"
 
 	<systemsettings>
-	self isCopilotEngineSelected ifFalse: [ ^ self ].
 
 	(aBuilder setting: #CopilotSettings)
 		target: self;
