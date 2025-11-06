@@ -119,6 +119,13 @@ OllamaClient >> generateForPrefix: prefixString suffix: suffixString [
 	prompt := CopilotSettings fimTemplate format: {
 			          prefixString.
 			          suffixString }.
+
+	"Add this line to log the FINAL prompt text"
+	CoCopilotLogger logBackEndEvent: 'Final FIM prompt' details: (Dictionary new
+			 at: #modelFullName put: modelSpec fullName;
+			 at: #finalPrompt put: prompt;
+			 yourself).
+
 	originalOptions := options copy.
 	options at: #task put: 'fill-in-the-middle'.
 	CoCopilotLogger logBackEndEvent: 'Augmented Ollama options for fill-in-the-middle' details: (Dictionary new
@@ -130,6 +137,37 @@ OllamaClient >> generateForPrefix: prefixString suffix: suffixString [
 			 at: #optionsRestored put: options;
 			 yourself).
 	^ response
+
+]
+
+{ #category : 'as yet unclassified' }
+OllamaClient >> generateForPrefix: prefixString suffix: suffixString contextDetails: contextDetails [
+
+        | prompt originalOptions response safeDetails |
+        safeDetails := contextDetails ifNil: [ Dictionary new ].
+        CoCopilotLogger logBackEndEvent: 'Preparing fill-in-the-middle request' details: (Dictionary new
+                         at: #prefix put: prefixString;
+                         at: #suffix put: suffixString;
+                         at: #template put: CopilotSettings fimTemplate;
+                         at: #contextDetails put: safeDetails copy;
+                         at: #optionsBefore put: options copy;
+                         yourself).
+
+        prompt := CopilotSettings
+                fimPromptForPrefix: prefixString
+                suffix: suffixString
+                contextDetails: safeDetails.
+        originalOptions := options copy.
+        options at: #task put: 'fill-in-the-middle'.
+        CoCopilotLogger logBackEndEvent: 'Augmented Ollama options for fill-in-the-middle' details: (Dictionary new
+                         at: #optionsAfter put: options;
+                         yourself).
+        response := self generate: prompt.
+        options := originalOptions.
+        CoCopilotLogger logBackEndEvent: 'Restored Ollama options after fill-in-the-middle' details: (Dictionary new
+                         at: #optionsRestored put: options;
+                         yourself).
+        ^ response
 ]
 
 { #category : 'initialization' }

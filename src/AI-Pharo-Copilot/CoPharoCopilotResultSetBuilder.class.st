@@ -17,6 +17,15 @@ CoPharoCopilotResultSetBuilder class >> initializeOnContext: aSystemCompletionCo
 ]
 
 { #category : 'API - building' }
+CoPharoCopilotResultSetBuilder >> behaviorFromContext: aContext [ 
+
+        ^ self
+                valueFrom: aContext
+                usingSelectors: #(behavior selectedClass classOrMetaClass methodClass)
+                default: nil
+]
+
+{ #category : 'API - building' }
 CoPharoCopilotResultSetBuilder >> buildCompletion [
 
         | context prefix suffix contextInfo process fetcher |
@@ -91,6 +100,56 @@ CoPharoCopilotResultSetBuilder >> cleanedContentFrom: aString [
 ]
 
 { #category : 'API - building' }
+CoPharoCopilotResultSetBuilder >> defaultFilePath [
+
+        ^ CopilotSettings defaultFilePathToken
+]
+
+{ #category : 'API - building' }
+CoPharoCopilotResultSetBuilder >> defaultRepositoryName [
+
+        ^ CopilotSettings defaultRepositoryName
+]
+
+{ #category : 'API - building' }
+CoPharoCopilotResultSetBuilder >> fileReferencePathFromContext: aContext [
+
+        | reference candidate |
+        reference := self
+                valueFrom: aContext
+                usingSelectors: #(fileReference file)
+                default: nil.
+        reference ifNotNil: [
+                candidate := self
+                        valueFrom: reference
+                        usingSelectors: #(pathString fullName)
+                        default: reference.
+                ^ self safeStringFrom: candidate default: nil
+        ].
+        candidate := self
+                valueFrom: aContext
+                usingSelectors: #(sourceFile fileName filePath)
+                default: nil.
+        ^ self safeStringFrom: candidate default: nil
+]
+
+{ #category : 'API - building' }
+CoPharoCopilotResultSetBuilder >> fimContextDetailsForContext: aContext prefix: prefixString suffix: suffixString contextInfo: contextInfo [
+
+        | details fullSource |
+        details := Dictionary new.
+        details at: #repoName put: (self repositoryNameForContext: aContext).
+        details at: #filePath1 put: (self primaryFilePathForContext: aContext).
+        fullSource := contextInfo at: #fullSource ifAbsent: [ prefixString , suffixString ].
+        details at: #fileContent1 put: (self safeStringFrom: fullSource default: '').
+        details at: #filePath2 put: ''.
+        details at: #fileContent2 put: ''.
+        details at: #filePath3 put: ''.
+        details at: #codeMiddle put: ''.
+        ^ details
+]
+
+{ #category : 'API - building' }
 CoPharoCopilotResultSetBuilder >> indexOfClosingFenceIn: text startingAt: startIndex [ 
 
         | idx lastValid size |
@@ -141,16 +200,48 @@ CoPharoCopilotResultSetBuilder >> isLanguageSpec: aString [
 ]
 
 { #category : 'API - building' }
+CoPharoCopilotResultSetBuilder >> primaryFilePathForContext: aContext [
+
+        | path behavior selector behaviorName selectorName |
+        path := self fileReferencePathFromContext: aContext.
+        path ifNotNil: [ ^ path ].
+        behavior := self behaviorFromContext: aContext.
+        selector := self selectorFromContext: aContext.
+        behaviorName := self safeStringFrom: (behavior ifNil: [ nil ] ifNotNil: [
+                (behavior respondsTo: #name)
+                        ifTrue: [ behavior name ]
+                        ifFalse: [ behavior ] ]) default: nil.
+        selectorName := self safeStringFrom: selector default: nil.
+        (behaviorName notNil and: [ selectorName notNil ]) ifTrue: [
+                ^ behaviorName , '>>', selectorName
+        ].
+        behaviorName ifNotNil: [ ^ behaviorName , '.st' ].
+        selectorName ifNotNil: [ ^ selectorName , '.st' ].
+        ^ self defaultFilePath
+]
+
+{ #category : 'API - building' }
 CoPharoCopilotResultSetBuilder >> processCompletionFor: aContext prefix: prefixString suffix: suffixString contextInfo: contextInfo [
 
         [
-                | client rawResponse rawResponseString content |
+                                | client rawResponse rawResponseString content contextDetails |
+                contextDetails := self
+                        fimContextDetailsForContext: aContext
+                        prefix: prefixString
+                        suffix: suffixString
+                        contextInfo: contextInfo.
+                contextInfo
+                        at: #repositoryName put: (contextDetails at: #repoName ifAbsent: [ CopilotSettings defaultRepositoryName ]);
+                        at: #primaryFilePath put: (contextDetails at: #filePath1 ifAbsent: [ CopilotSettings defaultFilePathToken ]).
                 CoCopilotLogger
                         logFrontEndEvent: 'Preparing completion request'
                         details: contextInfo.
 
                 client := OllamaClient new.
-                rawResponse := client generateForPrefix: prefixString suffix: suffixString.
+                                rawResponse := client
+                        generateForPrefix: prefixString
+                        suffix: suffixString
+                        contextDetails: contextDetails.
                 rawResponseString := [ rawResponse asString ]
                         on: Error
                         do: [ rawResponse printString ].
@@ -220,4 +311,71 @@ aContext
                                 at: #prefixLength put: prefixString size;
                                 at: #suffixLength put: suffixString size;
                                 yourself) ]
+]
+
+{ #category : 'API - building' }
+CoPharoCopilotResultSetBuilder >> repositoryNameForContext: aContext [
+
+        | packageCandidate behavior packageName |
+        packageCandidate := self
+                valueFrom: aContext
+                usingSelectors: #(package selectedPackage packageName)
+                default: nil.
+        packageName := self safeStringFrom: packageCandidate default: nil.
+        packageName ifNotNil: [ ^ packageName ].
+        behavior := self behaviorFromContext: aContext.
+        behavior ifNil: [ ^ self defaultRepositoryName ].
+        packageCandidate := self
+                valueFrom: behavior
+                usingSelectors: #(package)
+                default: nil.
+        packageCandidate ifNotNil: [
+                packageName := self safeStringFrom: ((packageCandidate respondsTo: #name)
+                        ifTrue: [ packageCandidate name ]
+                        ifFalse: [ packageCandidate ]) default: nil.
+                packageName ifNotNil: [ ^ packageName ]
+        ].
+        packageCandidate := self
+                valueFrom: behavior
+                usingSelectors: #(category categoryName)
+                default: nil.
+        packageName := self safeStringFrom: packageCandidate default: nil.
+        packageName ifNotNil: [ ^ packageName ].
+        ^ self defaultRepositoryName
+]
+
+{ #category : 'API - building' }
+CoPharoCopilotResultSetBuilder >> safeStringFrom: anObject default: defaultString [
+
+        | value |
+        anObject isNil ifTrue: [ ^ defaultString ].
+        value := [ anObject asString ] on: Error do: [ nil ].
+        value ifNil: [ value := [ anObject printString ] on: Error do: [ nil ] ].
+        value ifNil: [ ^ defaultString ].
+        value := value asString.
+        value isEmpty ifTrue: [ ^ defaultString ].
+        ^ value
+]
+
+{ #category : 'API - building' }
+CoPharoCopilotResultSetBuilder >> selectorFromContext: aContext [
+
+        ^ self
+                valueFrom: aContext
+                usingSelectors: #(selector selectedSelector methodSelector currentSelector)
+                default: nil
+]
+
+{ #category : 'API - building' }
+CoPharoCopilotResultSetBuilder >> valueFrom: anObject usingSelectors: selectors default: defaultValue [
+
+        anObject isNil ifTrue: [ ^ defaultValue ].
+        selectors do: [ :selector |
+                (anObject respondsTo: selector) ifTrue: [
+                        [ | value |
+                        value := anObject perform: selector.
+                        value ifNotNil: [ ^ value ] ]
+                                on: Error
+                                do: [ :ignored | ] ] ].
+        ^ defaultValue
 ]

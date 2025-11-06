@@ -117,6 +117,12 @@ CopilotSettings class >> copilotProvider: aSymbol [
 ]
 
 { #category : 'accessing' }
+CopilotSettings class >> defaultFilePathToken [
+
+    ^ 'current-buffer'
+]
+
+{ #category : 'accessing' }
 CopilotSettings class >> defaultFimTemplate [
 
     | template cacheFile |
@@ -134,6 +140,24 @@ CopilotSettings class >> defaultFimTemplate [
     template ifNotNil: [ ^ template ].
     self logMissingFimTemplate.
     ^ self error: 'No fill-in-the-middle template is available for the current Copilot model.'
+]
+
+{ #category : 'accessing' }
+CopilotSettings class >> defaultRepositoryAwareFimTemplate [
+
+    ^ '<|repo_name|>%1', String lf,
+        '<|file_sep|>%2', String lf,
+        '%3', String lf,
+        '<|file_sep|>%4', String lf,
+        '%5', String lf,
+        '<|file_sep|>%6', String lf,
+        '<|fim_prefix|>%7<|fim_suffix|>%8<|fim_middle|>%9<|endoftext|>'
+]
+
+{ #category : 'accessing' }
+CopilotSettings class >> defaultRepositoryName [
+
+    ^ 'UnknownPackage'
 ]
 
 { #category : 'settings' }
@@ -240,6 +264,47 @@ yourself) ].
 ]
 
 { #category : 'accessing' }
+CopilotSettings class >> fimFormatSafeValueFrom: anObject [
+
+    | string |
+    anObject isNil ifTrue: [ ^ '' ].
+    string := [ anObject asString ]
+        on: Error
+        do: [ :ignored | [ anObject printString ] on: Error do: [ '' ] ].
+    string := string ifNil: [ '' ].
+    string isEmpty ifTrue: [ ^ '' ].
+    ^ string
+]
+
+{ #category : 'accessing' }
+CopilotSettings class >> fimPromptForPrefix: prefixString suffix: suffixString contextDetails: contextDetails [
+
+    | template safeContext repoName filePath1 fileContent1 filePath2 fileContent2 filePath3 codeMiddle values |
+    template := self fimTemplate.
+    (self fimTemplateSupportsRepositoryContext: template) ifFalse: [
+        template := self defaultRepositoryAwareFimTemplate
+    ].
+    safeContext := contextDetails ifNil: [ Dictionary new ].
+    repoName := self fimFormatSafeValueFrom: (safeContext at: #repoName ifAbsent: [ self defaultRepositoryName ]).
+    filePath1 := self fimFormatSafeValueFrom: (safeContext at: #filePath1 ifAbsent: [ self defaultFilePathToken ]).
+    fileContent1 := self fimFormatSafeValueFrom: (safeContext at: #fileContent1 ifAbsent: [ '' ]).
+    filePath2 := self fimFormatSafeValueFrom: (safeContext at: #filePath2 ifAbsent: [ '' ]).
+    fileContent2 := self fimFormatSafeValueFrom: (safeContext at: #fileContent2 ifAbsent: [ '' ]).
+    filePath3 := self fimFormatSafeValueFrom: (safeContext at: #filePath3 ifAbsent: [ '' ]).
+    codeMiddle := self fimFormatSafeValueFrom: (safeContext at: #codeMiddle ifAbsent: [ '' ]).
+    values := { repoName.
+        filePath1.
+        fileContent1.
+        filePath2.
+        fileContent2.
+        filePath3.
+        (self fimFormatSafeValueFrom: prefixString).
+        (self fimFormatSafeValueFrom: suffixString).
+        codeMiddle }.
+    ^ template format: values
+]
+
+{ #category : 'accessing' }
 CopilotSettings class >> fimTemplate [
 
 	    | metadata template |
@@ -313,6 +378,29 @@ CopilotSettings class >> fimTemplateFromFile: aFileReference [
 CopilotSettings class >> fimTemplateOption: aString [
 
 	"The inline FIM template is sourced from the templates repository."
+]
+
+{ #category : 'accessing' }
+CopilotSettings class >> fimTemplateSupportsRepositoryContext: aTemplateString [
+    | template |
+    template := aTemplateString ifNil: [ '' ].
+    ^ (template includesSubstring: '<|repo_name|>')
+        and: [
+            (template includesSubstring: '<|file_sep|>')
+                and: [
+                    (template includesSubstring: '<|fim_prefix|>')
+                        and: [
+                            (template includesSubstring: '<|fim_suffix|>')
+                                and: [
+                                    (template includesSubstring: '<|fim_middle|>')
+                                        and: [
+                                            template includesSubstring: '<|endoftext|>'
+                                        ]
+                                ]
+                        ]
+                ]
+        ]
+
 ]
 
 { #category : 'accessing' }
