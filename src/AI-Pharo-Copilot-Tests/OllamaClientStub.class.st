@@ -28,18 +28,11 @@ OllamaClientStub >> callCount [
 { #category : 'accessing' }
 OllamaClientStub >> defaultModelsResponse [
 
-	        ^ Dictionary new
-                  at: #models put: { (Dictionary new
-                                   at: #name put: (CopilotSettings modelName ifNil: [OTestModelSupport mockModelName ]);
-                                   yourself) };
-                  yourself
-]
-
-{ #category : 'accessing' }
-OllamaClientStub >> generateForPrefix: prefixString suffix: suffixString contextDetails: contextDetails [
-
-    callCount := self callCount + 1.
-    ^ response ifNil: [ Dictionary new at: #response put: ''; yourself ] ifNotNil: [ response ]
+	^ Dictionary new
+		  at: #models put: { (Dictionary new
+				   at: #name put: (CopilotSettings modelName ifNil: [OTestModelSupport mockModelName ]);
+				   yourself) };
+		  yourself
 ]
 
 { #category : 'accessing' }

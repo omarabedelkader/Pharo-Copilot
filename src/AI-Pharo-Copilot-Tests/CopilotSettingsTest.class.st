@@ -468,37 +468,6 @@ CopilotSettingsTest >> testPortStringInputParsesToNumber [
 ]
 
 { #category : 'tests' }
-CopilotSettingsTest >> testRepositoryAwareFimPromptIncludesContext [
-
-    CopilotSettings withDefaultSettingsDo: [
-        | contextDetails prefix suffix prompt |
-        contextDetails := Dictionary new
-            at: #repoName put: 'SamplePackage';
-            at: #filePath1 put: 'src/Sample.class.st';
-            at: #fileContent1 put: 'Class { #name : ''Sample'' }';
-            at: #filePath2 put: 'docs/Guide.md';
-            at: #fileContent2 put: 'Guide % complete';
-            at: #filePath3 put: 'tests/SampleTest.class.st';
-            at: #codeMiddle put: 'middle snippet';
-            yourself.
-        prefix := 'prefix%1'.
-        suffix := 'suffix'.
-        prompt := CopilotSettings
-            fimPromptForPrefix: prefix
-            suffix: suffix
-            contextDetails: contextDetails.
-        self assert: (prompt includesSubstring: '<|repo_name|>SamplePackage').
-        self assert: (prompt includesSubstring: String lf , '<|file_sep|>src/Sample.class.st').
-        self assert: (prompt includesSubstring: 'Class { #name : ''Sample'' }').
-        self assert: (prompt includesSubstring: '<|file_sep|>docs/Guide.md').
-        self assert: (prompt includesSubstring: 'Guide % complete').
-        self assert: (prompt includesSubstring: '<|file_sep|>tests/SampleTest.class.st').
-        self assert: (prompt includesSubstring: '<|fim_prefix|>prefix%1<|fim_suffix|>suffix<|fim_middle|>middle snippet<|endoftext|>').
-    ]
-
-]
-
-{ #category : 'tests' }
 CopilotSettingsTest >> testShouldShowDetailedSettingsReflectsCopilotEnabled [ 
     | old |
     old := CopilotSettings copilotEnabled.
