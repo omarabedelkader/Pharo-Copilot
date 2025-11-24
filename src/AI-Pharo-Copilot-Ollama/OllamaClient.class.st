@@ -65,6 +65,23 @@ OllamaClient >> ensureStringFromResponse: container fallback: fallbackString [
 ]
 
 { #category : 'operations' }
+OllamaClient >> expandFimTemplate: templateString prefix: prefixString suffix: suffixString [
+
+        | prompt safePrefix safeSuffix |
+        safePrefix := prefixString ifNil: [ '' ] ifNotNil: [ prefixString asString ].
+        safeSuffix := suffixString ifNil: [ '' ] ifNotNil: [ suffixString asString ].
+        prompt := templateString ifNil: [ '' ].
+        prompt := prompt copyReplaceAll: '{{ .Prompt }}' with: safePrefix.
+        prompt := prompt copyReplaceAll: '{{.Prompt}}' with: safePrefix.
+        prompt := prompt copyReplaceAll: '{{ .Suffix }}' with: safeSuffix.
+        prompt := prompt copyReplaceAll: '{{.Suffix}}' with: safeSuffix.
+        prompt := prompt format: {
+                safePrefix.
+                safeSuffix }.
+        ^ prompt
+]
+
+{ #category : 'operations' }
 OllamaClient >> generate: aPromptString [
 
         | payload resp normalized |
@@ -107,29 +124,32 @@ OllamaClient >> generate: aPromptString [
 
 { #category : 'as yet unclassified' }
 OllamaClient >> generateForPrefix: prefixString suffix: suffixString [
+| prompt originalOptions response |
+        CoCopilotLogger logBackEndEvent: 'Preparing fill-in-the-middle request' details: (Dictionary new
+                         at: #prefix put: prefixString;
+                         at: #suffix put: suffixString;
+                         at: #template put: CopilotSettings fimTemplate;
+                         at: #optionsBefore put: options copy;
+                         yourself).
 
-	| prompt originalOptions response |
-	CoCopilotLogger logBackEndEvent: 'Preparing fill-in-the-middle request' details: (Dictionary new
-			 at: #prefix put: prefixString;
-			 at: #suffix put: suffixString;
-			 at: #template put: CopilotSettings fimTemplate;
-			 at: #optionsBefore put: options copy;
-			 yourself).
-
-	prompt := CopilotSettings fimTemplate format: {
-			          prefixString.
-			          suffixString }.
-	originalOptions := options copy.
-	options at: #task put: 'fill-in-the-middle'.
-	CoCopilotLogger logBackEndEvent: 'Augmented Ollama options for fill-in-the-middle' details: (Dictionary new
-			 at: #optionsAfter put: options;
-			 yourself).
-	response := self generate: prompt.
-	options := originalOptions.
-	CoCopilotLogger logBackEndEvent: 'Restored Ollama options after fill-in-the-middle' details: (Dictionary new
-			 at: #optionsRestored put: options;
-			 yourself).
-	^ response
+        prompt := self
+                        expandFimTemplate: CopilotSettings fimTemplate
+                        prefix: prefixString
+                        suffix: suffixString.
+        CoCopilotLogger logBackEndEvent: 'Expanded fill-in-the-middle template' details: (Dictionary new
+                         at: #prompt put: prompt;
+                         yourself).
+        originalOptions := options copy.
+        options at: #task put: 'fill-in-the-middle'.
+        CoCopilotLogger logBackEndEvent: 'Augmented Ollama options for fill-in-the-middle' details: (Dictionary new
+                         at: #optionsAfter put: options;
+                         yourself).
+        response := self generate: prompt.
+        options := originalOptions.
+        CoCopilotLogger logBackEndEvent: 'Restored Ollama options after fill-in-the-middle' details: (Dictionary new
+                         at: #optionsRestored put: options;
+                         yourself).
+        ^ response
 ]
 
 { #category : 'initialization' }
