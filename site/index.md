@@ -6,12 +6,7 @@
 
 
 # Pharo Copilot – System Documentation
-AI-Pharo-Copilot Documentation
-Home
-Publications
-News
 
-AI-Pharo-Copilot: Complete Technical Documentation
 Table of Contents
 1. Executive Summary
 2. Architecture Overview
