@@ -812,27 +812,25 @@ CopilotSettings class >> shouldShowDetailedSettings [
 ]
 
 { #category : 'accessing' }
-CopilotSettings class >> showInstallCompletionDialog [ 
+CopilotSettings class >> showInstallCompletionDialog [
 
-        | message uiClass uiManager transcript |
-        message := 'Pharo Copilot installed!' , String cr , String cr ,
-                'Enable it via Settings → Code Browser → Code Completion → Completion Engine → Copilot.' , String cr ,
-                'Press OK once you have noted the steps.'.
-        uiClass := Smalltalk globals at: #UIManager ifAbsent: [ nil ].
-        uiClass ifNotNil: [
-                (uiClass respondsTo: #default)
-                        ifTrue: [
-                                uiManager := uiClass default.
-                                (uiManager respondsTo: #longMessage:title:)
-                                        ifTrue: [ ^ uiManager longMessage: message title: 'Pharo Copilot setup' ].
-                                (uiManager respondsTo: #inform:)
-                                        ifTrue: [ ^ uiManager inform: message ] ].
-        ].
-        transcript := Smalltalk globals at: #Transcript ifAbsent: [ nil ].
-        transcript ifNotNil: [
-                (transcript respondsTo: #show:)
-                        ifTrue: [ transcript show: message; cr ]
-        ].
+	| message uiClass uiManager transcript |
+	message := 'Pharo Copilot installed ' , String cr , 'Welcome to Pharo-Copilot' , String cr
+	           , 'Ollama runs your models locally, so none of your data is sent anywhere.' , String cr
+	           , 'Everything is already configured—just open your Browser and start typing.' , String cr
+	           , 'For more details, visit our documentation' , String cr.
+	uiClass := Smalltalk globals at: #UIManager ifAbsent: [ nil ].
+	uiClass ifNotNil: [
+			(uiClass respondsTo: #default) ifTrue: [
+					uiManager := uiClass default.
+					(uiManager respondsTo: #longMessage:title:) ifTrue: [ ^ uiManager longMessage: message title: 'Pharo Copilot setup' ].
+					(uiManager respondsTo: #inform:) ifTrue: [ ^ uiManager inform: message ] ] ].
+	transcript := Smalltalk globals at: #Transcript ifAbsent: [ nil ].
+	transcript ifNotNil: [
+			(transcript respondsTo: #show:) ifTrue: [
+					transcript
+						show: message;
+						cr ] ]
 ]
 
 { #category : 'accessing' }
