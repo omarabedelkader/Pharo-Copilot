@@ -2170,13 +2170,6 @@ pharo-image-directory/
   - modelFullName: pharo-coder-1.5b-fim-f16.gguf:latest
 ```
 
-**Evaluation Log** (`copilot-evaluation-log.jsonl`):
-
-```jsonl
-{"timestamp":"2025-01-15T14:23:45","action":"accepted","suggestion":"code here","context":"Object >> test","model":"pharo-coder-1.5b-fim-f16.gguf:latest"}
-{"timestamp":"2025-01-15T14:24:10","action":"rejected","suggestion":"wrong code","context":"Object >> test2","model":"pharo-coder-1.5b-fim-f16.gguf:latest","reason":"Incorrect syntax"}
-```
-
 ---
 
 ## Appendix C: API Reference
