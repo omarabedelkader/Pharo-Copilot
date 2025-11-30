@@ -9,6 +9,8 @@ Pharo-Copilot is an AI-powered code completion engine for Pharo, designed to enh
 
 ## Installation
 
+Ensure you have **Pharo** installed on your system as well as **[Ollama](https://ollama.com/)** for the underlying AI model hosting.
+
 To install stable version of `Pharo-Copilot` in your image you can use:
 
 ```smalltalk
