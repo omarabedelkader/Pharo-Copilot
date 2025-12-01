@@ -266,12 +266,6 @@ CopilotSettings class >> fimTemplateFromFile: aFileReference [
 ]
 
 { #category : 'accessing' }
-CopilotSettings class >> fimTemplateOption: aString [
-
-	"The inline FIM template is sourced from the templates repository."
-]
-
-{ #category : 'accessing' }
 CopilotSettings class >> host [
 
     ^ Host ifNil: [ Host := '127.0.0.1' ].
@@ -826,7 +820,9 @@ CopilotSettings class >> shouldAutoInstallModelNamed: modelName [
 
     (self autoInstallModelScriptEnabled) ifFalse: [ ^ false ].
     modelName ifNil: [ ^ false ].
-    ^ modelName = 'pharo-coder-1.5b-fim-f16.gguf:latest'
+    (modelName respondsTo: #isEmpty) ifTrue: [ modelName isEmpty ifTrue: [ ^ false ] ].
+    (self isNullModelName: modelName) ifTrue: [ ^ false ].
+    ^ true
 ]
 
 { #category : 'accessing' }
