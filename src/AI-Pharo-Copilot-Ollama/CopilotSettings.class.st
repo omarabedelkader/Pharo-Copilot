@@ -571,7 +571,7 @@ CopilotSettings class >> port: aNumber [
 CopilotSettings class >> promptToInstallMissingModelNamed: modelName availableModels: availableModels [
 
 	| uiClass uiManager confirmation message transcript |
-	message := 'The model is not available' format: { modelName }.
+	message := 'This model is not available, Do you want to install it ? ' format: { modelName }.
 	CoCopilotLogger logBackEndEvent: 'Prompting user to install missing Ollama model' details: (Dictionary new
 			 at: #model put: modelName;
 			 at: #availableModels put: availableModels;
