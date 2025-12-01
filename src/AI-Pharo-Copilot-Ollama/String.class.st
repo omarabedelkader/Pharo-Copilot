@@ -579,7 +579,8 @@ String >> asByteArray [
 	"'a' asByteArray >>> #[97]"
 	"'A' asByteArray >>> #[65]"
 	"'ABA' asByteArray >>> #[65 66 65]"
-	self subclassResponsibility
+			^ ByteArray streamContents: [ :stream |
+			self do: [ :each | stream nextPut: each asciiValue ] ]
 ]
 
 { #category : 'converting' }
