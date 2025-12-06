@@ -32,3 +32,10 @@ github-*.zip
 
 #
 .DS_Store
+
+
+# Copilot runtime data
+/copilot-logs/
+copilot.log
+copilot-evaluation-log.jsonl
+/pharo-copilot/
