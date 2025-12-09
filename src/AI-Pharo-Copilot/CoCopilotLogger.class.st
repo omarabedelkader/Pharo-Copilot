@@ -83,7 +83,7 @@ CoCopilotLogger class >> ensureLogsDirectory [
 	self loggingEnabled ifFalse: [ ^ self logsDirectoryReference ].
 	directory := self logsDirectoryReference.
 	[
-		directory directory parent ensureCreateDirectory.
+		directory parent ifNotNil: [ :parent | parent ensureCreateDirectory ].
 		directory ensureCreateDirectory ]
 		on: Error
 		do: [ :ex |
