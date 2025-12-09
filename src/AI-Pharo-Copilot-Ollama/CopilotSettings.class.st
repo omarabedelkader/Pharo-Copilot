@@ -641,7 +641,6 @@ CopilotSettings class >> removeMetadataTextFilesFrom: aDirectory [
 { #category : 'accessing' }
 CopilotSettings class >> resetToDefaultSettings [
 
-	<script>
 	Enabled := nil.
 	Provider := nil.
 	ModelName := nil.
