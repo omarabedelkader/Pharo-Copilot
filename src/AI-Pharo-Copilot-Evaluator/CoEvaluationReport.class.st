@@ -29,6 +29,8 @@ CoEvaluationReport >> addLengthStatsTo: stream [
 	stream nextPutAll: 'SUGGESTION LENGTH ANALYSIS'; lf.
 	stream nextPutAll: '--------------------------'; lf.
 	
+	"stream nextPullAll:'--------------------------'."
+	
 	(evaluator sessionStats at: #lengthStats) keysAndValuesDo: [ :length :lengthStats |
 		| total accepted rate |
 		total := (lengthStats at: #accepted) + (lengthStats at: #rejected) + (lengthStats at: #ignored).
