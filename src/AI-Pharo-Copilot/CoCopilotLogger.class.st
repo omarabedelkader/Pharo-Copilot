@@ -113,15 +113,11 @@ CoCopilotLogger class >> formatValue: anObject [
 { #category : 'class initialization' }
 CoCopilotLogger class >> initialize [
 
-	logFileReference := nil.
-	        logsDirectoryReference := nil.
-        evaluationLogFileReference := nil.
-        self ensureLogsDirectory.
-        self ensureLogFileInitialized.
-        self ensureEvaluationLogFileInitialized
+	self ensureLogFileInitialized.
+	self ensureEvaluationLogFileInitialized
 ]
 
-{ #category : 'class initialization' }
+{ #category : 'introspection' }
 CoCopilotLogger class >> instVarNamed: aStringOrSymbol [ 
 
         | name |
@@ -132,7 +128,7 @@ CoCopilotLogger class >> instVarNamed: aStringOrSymbol [
         ^ super instVarNamed: aStringOrSymbol
 ]
 
-{ #category : 'class initialization' }
+{ #category : 'introspection' }
 CoCopilotLogger class >> instVarNamed: aStringOrSymbol put: aValue [
 
         | name |
