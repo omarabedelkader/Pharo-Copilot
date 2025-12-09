@@ -33,7 +33,7 @@ OllamaClient class >> nullModelFullName [
 { #category : 'accessing' }
 OllamaClient class >> nullModelResponseString [
 
-  ^ 'no output, please configure.'
+  ^ ''
 ]
 
 { #category : 'private' }
