@@ -1736,25 +1736,29 @@ String >> flattenOn: aStream [
 ]
 
 { #category : 'formatting' }
-String >> format: replacements [ 
+String >> format: collection [
+	"Format the receiver by interpolating elements from collection, as in the following examples:"
+	"('Five is {1}.' format: { 1 + 4}) >>> 'Five is 5.'"
+	"('Five is {five}.' format: (Dictionary with: #five -> 5)) >>>  'Five is 5.'"
+	"('In {1} you can escape \{ by prefixing it with \\' format: {'strings'}) >>> 'In strings you can escape { by prefixing it with \' "
+	"('In \{1\} you can escape \{ by prefixing it with \\' format: {'strings'}) >>> 'In {1} you can escape { by prefixing it with \' "
 
-    | values result |
-    replacements ifNil: [ ^ self ].
-    (replacements respondsTo: #size) ifFalse: [ ^ self ].
-    (replacements respondsTo: #at:) ifFalse: [ ^ self ].
-    ((replacements respondsTo: #isSequenceable) and: [ replacements isSequenceable ]) ifFalse: [ ^ self ].
-    values := replacements asArray.
-    values isEmpty ifTrue: [ ^ self ].
-
-    result := self copy.
-    values size to: 1 by: -1 do: [ :index |
-        | token value |
-        token := '%' , index asString.
-        (result includesSubstring: token) ifTrue: [
-            value := values at: index ifAbsent: [ '' ].
-            value := value ifNil: [ '' ] ifNotNil: [ value asString ].
-            result := result copyReplaceAll: token with: value ] ].
-    ^ result
+	^ self species
+		new: self size
+		streamContents: [ :result |
+			| stream |
+			stream := self readStream.
+			[ stream atEnd ]
+				whileFalse: [ | currentChar |
+					(currentChar := stream next) == ${
+						ifTrue: [ | expression index |
+							expression := stream upTo: $}.
+							index := Integer readFrom: expression ifFail: [ expression ].
+							result nextPutAll: (collection at: index) asString ]
+						ifFalse: [ currentChar == $\
+								ifTrue: [ stream atEnd
+										ifFalse: [ result nextPut: stream next ] ]
+								ifFalse: [ result nextPut: currentChar ] ] ] ]
 ]
 
 { #category : 'testing' }
