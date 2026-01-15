@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-bs-theme="light">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -11,11 +11,22 @@
 <body>
 
 <header class="border-bottom">
-  <div class="container-xxl py-3 d-flex justify-content-between">
+  <div class="container-xxl py-3 d-flex justify-content-between align-items-center">
     <div class="fw-semibold">Pharo-Copilot Documentation</div>
-    <a href="index.html">Home</a>
+
+    <div class="d-flex gap-3 align-items-center">
+      <a href="index.html">Home</a>
+      <button
+        id="theme-toggle"
+        class="btn btn-sm btn-outline-secondary"
+        type="button"
+        aria-label="Toggle theme">
+        🌙
+    </button>
+    </div>
   </div>
 </header>
+
 
 <main class="container-xxl my-4">
   <div class="row g-4">
@@ -206,15 +217,8 @@ Reference</a></li>
       <article class="border rounded-3 p-4">
         <body>
 
-<p>{ “title” : “Pharo-Copilot Documentation”, “layout”: “index”,
-“publishDate”: “2025-11-30” }</p>
 <h1 id="pharo-copilot-system-documentation">Pharo Copilot – System
 Documentation</h1>
-<p>Table of Contents 1. Executive Summary 2. Architecture Overview 3.
-Core Components 4. Ollama Integration 5. Completion Engine 6. Evaluation
-System 7. Fill-in-the-Middle (FIM) Templates 8. Installation &amp; Setup
-9. Usage Guide 10. Configuration &amp; Settings 11. Extension Points 12.
-Troubleshooting 13. Testing Suite</p>
 <hr/>
 <h2 id="executive-summary">1. Executive Summary</h2>
 <p>AI-Pharo-Copilot is an AI-powered code completion assistant
