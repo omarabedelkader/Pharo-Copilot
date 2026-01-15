@@ -6,14 +6,6 @@
   --link: #0969da;
 }
 
-:root {
-  --bg: #ffffff;
-  --fg: #1f2328;
-  --muted: #6a737d;
-  --border: #d0d7de;
-  --link: #0969da;
-}
-
 html[data-bs-theme="dark"] {
   --bg: #0d1117;
   --fg: #e6edf3;
@@ -82,5 +74,22 @@ article {
   margin-left: 0.75rem;
 }
 
+/* Scroll to top button */
+.scroll-top {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 1030;
+  display: none; /* shown via JS */
+  border-radius: 999px;
+  padding-inline: 0.9rem;
+  padding-block: 0.55rem;
+  font-size: 1.1rem;
+  line-height: 1;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
 
-
+/* Slightly stronger shadow in dark mode */
+html[data-bs-theme="dark"] .scroll-top {
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.5);
+}
