@@ -328,38 +328,50 @@ CopilotSettings class >> host: aString [
 ]
 
 { #category : 'accessing' }
-CopilotSettings class >> installModelNamed: aModelName [
-	"Invoke Ollama to pull/install the given model; answer whether it succeeded."
+CopilotSettings class >> installModelNamed: aModelName [ [
+	| client uiManager uiClass finalResponse |
 
-	| client |
+	client := self newOllamaClient.
+	uiClass := Smalltalk globals at: #UIManager ifAbsent: [ nil ].
+	uiManager := (uiClass notNil and: [ uiClass respondsTo: #default ])
+		ifTrue: [ uiClass default ] ifFalse: [ nil ].
+
 	[
-		client := self newOllamaClient.
+		(uiManager notNil and: [ uiManager respondsTo: #displayProgress:from:to:during: ])
+			ifTrue: [
+				uiManager
+					displayProgress: ('Pulling Ollama model: ', aModelName)
+					from: 0
+					to: 100
+					during: [ :bar |
+						bar value: 0; title: 'Starting...'.
 
-		self notifyUser: ('Downloading... This may take a few minutes.' format: { aModelName }).
-		CoCopilotLogger
-			logBackEndEvent: 'Invoking Ollama model install script'
-			details: (Dictionary new
-				at: #model put: aModelName;
-				yourself).
+						finalResponse := client
+							pullModelNamed: aModelName
+							progress: [ :json |
+								| status total completed percent |
+								status := self valueForMetadataKey: #status in: json.
+								total := self valueForMetadataKey: #total in: json.
+								completed := self valueForMetadataKey: #completed in: json.
 
-		client pullModelNamed: aModelName.
+								(total isNumber and: [ completed isNumber and: [ total > 0 ] ])
+									ifTrue: [
+										percent := (((completed asFloat / total asFloat) * 100) truncated) min: 99.
+										bar value: percent ].
 
-		CoCopilotLogger
-			logBackEndEvent: 'Ollama model install script completed'
-			details: (Dictionary new
-				at: #model put: aModelName;
-				yourself).
+								(status notNil and: [ status asString notEmpty ])
+									ifTrue: [ bar title: (aModelName, ' — ', status asString) ].
+
+								(status = 'success') ifTrue: [ bar value: 100; title: (aModelName, ' — done') ] ] ] ] ]
+			ifFalse: [
+				finalResponse := client pullModelNamed: aModelName ].
+
 		^ true
 	] on: Error do: [ :ex |
-		CoCopilotLogger
-			logError: 'Failed to invoke Ollama model install script'
-			origin: #CopilotSettings
-			exception: ex
-			payload: (Dictionary new
-				at: #model put: aModelName;
-				yourself).
+		self notifyUser: ('Install failed: ', ex description).
 		^ false
 	]
+
 ]
 
 { #category : 'accessing' }
@@ -894,6 +906,32 @@ CopilotSettings class >> promptToInstallMissingModelNamed: aModelName availableM
 	^ confirmation
 ]
 
+{ #category : 'ui' }
+CopilotSettings class >> pullModelEntry [
+	"Text-box value (defaults to current model name)."
+	^ self modelName
+]
+
+{ #category : 'ui' }
+CopilotSettings class >> pullModelEntry: aString [
+	"User typed a model name -> pull it immediately with progress bar."
+
+	| name initialResponse |
+	name := (aString ifNil: [ '' ]) asString trimBoth.
+	name isEmpty ifTrue: [ ^ self ].
+
+	"Set selection first so metadata/template caching stays consistent."
+	self modelName: name.
+
+	"Grab initial model list, then install + refresh models list."
+	initialResponse := self ensureOllamaServiceAvailable.
+	initialResponse ifNil: [
+		self notifyUser: 'Ollama service is not reachable. Check host/port and that Ollama is running.'.
+		^ self ].
+
+	self performInstallOfModelNamed: name usingInitialResponse: initialResponse
+]
+
 { #category : 'settings' }
 CopilotSettings class >> refreshModelsAfterInstallOf: aModelName usingInitialResponse: initialResponse [
 	"Re-list models after an install and verify the target model is present; answer true if found."
@@ -1062,7 +1100,17 @@ CopilotSettings class >> settingsOn: aBuilder [
 				target: self;
 				getSelector: #port;
 				setSelector: #port:;
-				default: self port
+				default: self port.
+			
+						(aBuilder setting: #pullModelEntry)
+				order: 0.25;
+				label: 'Pull model (type name)';
+				target: self;
+				getSelector: #pullModelEntry;
+				setSelector: #pullModelEntry:;
+				default: self modelName;
+				description: 'Type any Ollama model name (e.g. llama3.2:latest) and it will be pulled/installed with a progress bar.'
+
 		]
 ]
 

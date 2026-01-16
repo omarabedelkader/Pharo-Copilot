@@ -352,31 +352,22 @@ OllamaClient >> prependContext: contextString toPrompt: promptString [
 
 { #category : 'ollama' }
 OllamaClient >> pullModelNamed: aString [
-	"Request Ollama to pull/install the given model name."
+	^ self pullModelNamed: aString progress: nil
+]
 
-	| payload response |
+{ #category : 'ollama' }
+OllamaClient >> pullModelNamed: aString progress: progressBlock [
+	| payload |
 	payload := Dictionary new
-		at: #name put: aString;
+		at: #model put: aString;    
+		at: #stream put: true;
 		yourself.
 
-	CoCopilotLogger
-		logBackEndEvent: 'Requesting Ollama model install'
-		details: (Dictionary new
-			at: #endpoint put: 'api/pull';
-			at: #model put: aString;
-			at: #payload put: payload;
-			yourself).
-
-	response := transport postJsonAt: 'api/pull' body: payload.
-
-	CoCopilotLogger
-		logBackEndEvent: 'Ollama model install request acknowledged'
-		details: (Dictionary new
-			at: #model put: aString;
-			at: #responseClass put: (response ifNil: [ 'nil' ] ifNotNil: [ response class name ]);
-			yourself).
-
-	^ response
+	^ transport
+		postNdjsonAt: 'api/pull'
+		body: payload
+		timeoutSeconds: 3600
+		onChunk: progressBlock
 ]
 
 { #category : 'ollama' }

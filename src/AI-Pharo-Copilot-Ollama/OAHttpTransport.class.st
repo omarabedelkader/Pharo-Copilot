@@ -156,3 +156,93 @@ OAHttpTransport >> postJsonAt: aPath body: aDictionary [
 	client contents: aDictionary.
 	^ client post
 ]
+
+{ #category : 'requests' }
+OAHttpTransport >> postNdjsonAt: aPath body: aDictionary timeoutSeconds: timeoutSeconds onChunk: aBlock [
+	"POST JSON and read application/x-ndjson streaming responses line-by-line.
+	Important: do NOT use #atEnd for socket streams; read until #nextLine answers nil."
+
+	| client response stream line obj last |
+
+	client := ZnClient new.
+	client
+		host: host;
+		port: port;
+		path: aPath.
+
+	(client respondsTo: #timeout:) ifTrue: [ client timeout: timeoutSeconds ].
+
+	"Critical for streaming downloads (otherwise Zinc may buffer the whole response)."
+	(client respondsTo: #streaming:) ifTrue: [ client streaming: true ]. 
+
+	self applyDefaultHeadersTo: client.
+	client accept: ZnMimeType applicationJson.
+	client entity: (ZnEntity json: (jsonWriter toString: aDictionary)).
+
+	client post.
+	response := client response.
+
+	"Handle non-2xx right away"
+	((response respondsTo: #isSuccess) and: [ response isSuccess not ]) ifTrue: [
+		^ Error signal: ('Ollama pull failed (HTTP ', response code asString, '): ', response entity contents) ].
+
+	last := nil.
+	stream := response entity readStream.
+
+	[
+		[ (line := stream nextLine) notNil ] whileTrue: [
+			line := line trimBoth.
+			line isEmpty ifTrue: [ "skip" ] ifFalse: [
+				obj := [ jsonReader fromString: line ] on: Error do: [ nil ].
+				obj ifNotNil: [
+					last := obj.
+
+					((obj respondsTo: #at:ifAbsent:) and: [ (obj at: #error ifAbsent: [ obj at: 'error' ifAbsent: [ nil ] ]) notNil ])
+						ifTrue: [
+							^ Error signal: (obj at: #error ifAbsent: [ obj at: 'error' ifAbsent: [ 'Unknown error' ] ]) ].
+
+					aBlock ifNotNil: [ aBlock value: obj ] ] ] ] ]
+	ensure: [
+		[ stream close ] on: Error do: [ :ignored | ].
+		[ client close ] on: Error do: [ :ignored | ] ].
+
+	^ last
+
+]
+
+{ #category : 'requests' }
+OAHttpTransport >> postStreamingJsonAt: aPath body: aDictionary timeoutSeconds: timeoutSeconds do: aBlock [
+	"POST JSON and read a newline-delimited stream of JSON objects (NDJSON).
+	For each parsed object, evaluate aBlock (if provided). Answer the last parsed object."
+
+	| client response stream line parsed last |
+	client := ZnEasy client.
+	client host: host; port: port; path: aPath.
+
+	(client respondsTo: #timeout:) ifTrue: [
+		timeoutSeconds ifNotNil: [ client timeout: timeoutSeconds ] ].
+
+	self applyDefaultHeadersTo: client.
+	client accept: ZnMimeType applicationJson.
+	client entity: (ZnEntity json: (jsonWriter toString: aDictionary)).
+
+	client post.
+	response := client response.
+
+	last := nil.
+	stream := response entity readStream.
+
+	[
+		[ stream atEnd ] whileFalse: [
+			line := stream nextLine.
+			line ifNotNil: [ line := line trimBoth ].
+
+			(line isNil or: [ line isEmpty ]) ifFalse: [
+				parsed := [ jsonReader fromString: line ] on: Error do: [ nil ].
+				parsed ifNotNil: [
+					last := parsed.
+					aBlock ifNotNil: [ aBlock value: parsed ] ] ] ] ]
+		ensure: [ [ stream close ] on: Error do: [ :ignored | ] ].
+
+	^ last
+]
