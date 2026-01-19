@@ -102,7 +102,7 @@ CopilotSettings class >> completionIdleMilliseconds: anObject [
 CopilotSettings class >> confirmViaUIManager: messageString [
 	"Ask for confirmation via UIManager; answer true/false, or nil if UIManager not available."
 
-	| uiClass uiManager |
+	| uiClass uiManager response |
 	uiClass := Smalltalk globals at: #UIManager ifAbsent: [ nil ].
 	uiClass ifNil: [ ^ nil ].
 	(uiClass respondsTo: #default) ifFalse: [ ^ nil ].
@@ -110,7 +110,10 @@ CopilotSettings class >> confirmViaUIManager: messageString [
 	uiManager := uiClass default.
 	(uiManager respondsTo: #confirm:) ifFalse: [ ^ nil ].
 
-	^ uiManager confirm: messageString
+response := UIManager default confirm: messageString.
+(response isKindOf: Boolean) ifFalse: [ ^ nil ].
+^ response
+
 ]
 
 { #category : 'accessing' }
