@@ -26,23 +26,32 @@ CoCopilotEntry >> activateOn: aCoCompletionContext [
 	"Apply this suggestion by inserting it at the cursor position."
 
 	| editor |
-	[ editor := aCoCompletionContext editor ] on: Error do: [ ^ self ].
-	editor ifNil: [ ^ self ].
+	aCoCompletionContext ifNil: [ Error signal: 'Completion context is nil' ].
+
+	editor := (aCoCompletionContext respondsTo: #editor)
+		ifTrue: [ aCoCompletionContext editor ]
+		ifFalse: [ nil ].
+
 
 	"Try to insert at caret (preserves user's text)"
-	(editor respondsTo: #addString:) ifTrue: [
-		^ editor addString: self contents
-	].
+	editor ifNotNil: [
+		(editor respondsTo: #addString:) ifTrue: [
+			^ editor addString: self contents
+		].
 
-	"Fallback: replace selection if empty"
-	(editor respondsTo: #selectionInterval) ifTrue: [
-		editor selectionInterval isEmpty ifTrue: [
-			^ editor replaceSelectionWith: self contents
+
+		"Fallback: replace selection if empty"
+		(editor respondsTo: #selectionInterval) ifTrue: [
+			editor selectionInterval isEmpty ifTrue: [
+				^ editor replaceSelectionWith: self contents
+			]
 		]
 	].
 
 	"Last resort: use context's replace method"
-	aCoCompletionContext replaceTokenInEditorWith: self contents
+	(aCoCompletionContext respondsTo: #replaceTokenInEditorWith:) ifTrue: [
+		^ aCoCompletionContext replaceTokenInEditorWith: self contents
+	]
 ]
 
 { #category : 'accessing' }

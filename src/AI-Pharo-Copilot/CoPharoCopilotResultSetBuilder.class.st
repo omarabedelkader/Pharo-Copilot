@@ -99,10 +99,25 @@ CoPharoCopilotResultSetBuilder >> buildCompletion [
 ]
 
 { #category : 'initialization' }
+CoPharoCopilotResultSetBuilder >> classContextFor: aContext [
+
+	| snapshot prefix |
+	aContext ifNil: [ ^ '' ].
+	snapshot := self contextSnapshotFor: aContext.
+	prefix := snapshot at: #prefix ifAbsent: [ '' ].
+	^ self classContextFor: aContext prefix: prefix
+]
+
+{ #category : 'initialization' }
 CoPharoCopilotResultSetBuilder >> classContextFor: aContext prefix: prefixString [ 
 
 	| behavior extractor ast compiledMethod methodClass selector stamp cached builder context classDefinition instanceSide classSide |
-	behavior := aContext completionClass.
+		behavior := (aContext respondsTo: #completionClass)
+		ifTrue: [ aContext completionClass ]
+		ifFalse: [
+			(aContext respondsTo: #behavior)
+				ifTrue: [ aContext behavior ]
+				ifFalse: [ nil ] ].
 	extractor := CNSelectorExtractor new.
 	ast := OCParser parseFaultyMethod: prefixString.
 	selector := extractor extractSelectorFromAST: ast atPosition: 1.
