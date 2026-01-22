@@ -22,11 +22,46 @@ Class {
 		'completionDebounceMilliseconds',
 		'completionIdleMilliseconds',
 		'requestTimeoutSeconds',
-		'modelInstallTimeoutSeconds'
+		'modelInstallTimeoutSeconds',
+		'temperature',
+		'topP',
+		'topK',
+		'numPredict',
+		'repeatPenalty',
+		'numCtx',
+		'seed',
+		'customParameters'
 	],
-	#category : 'AI-Pharo-Copilot-Ollama',
-	#package : 'AI-Pharo-Copilot-Ollama'
+	#category : 'AI-Pharo-Copilot',
+	#package : 'AI-Pharo-Copilot'
 }
+
+{ #category : 'ollama' }
+CopilotSettings class >> allOllamaOptions [
+	"Answer a dictionary of all Ollama options (standard + custom) ready to send to the API."
+
+	| options |
+	options := Dictionary new.
+
+	"Add standard parameters if they have non-nil values"
+	temperature ifNotNil: [ options at: #temperature put: temperature ].
+	topP ifNotNil: [ options at: #top_p put: topP ].
+	topK ifNotNil: [ options at: #top_k put: topK ].
+	numPredict ifNotNil: [ options at: #num_predict put: numPredict ].
+	repeatPenalty ifNotNil: [ options at: #repeat_penalty put: repeatPenalty ].
+	numCtx ifNotNil: [ options at: #num_ctx put: numCtx ].
+	seed ifNotNil: [ options at: #seed put: seed ].
+
+	"Add custom parameters"
+	customParameters ifNotNil: [
+		customParameters keysAndValuesDo: [ :key :value |
+			options at: key put: value
+		]
+	].
+
+	^ options
+
+]
 
 { #category : 'accessing' }
 CopilotSettings class >> attemptAutoInstallForModelNamed: aModelName usingInitialResponse: response [
@@ -48,6 +83,15 @@ CopilotSettings class >> autoInstallModelScriptEnabled: aBoolean [
 	"Enable/disable auto-install of missing models."
 
 	autoInstallModelScriptEnabled := aBoolean
+]
+
+{ #category : 'persistence' }
+CopilotSettings class >> autoSaveSettings [
+	"Automatically save settings to file when they change. Runs in background to avoid blocking UI."
+
+	[
+		self saveSettingsToFile
+	] forkAt: Processor userBackgroundPriority named: 'CopilotSettings auto-save'
 ]
 
 { #category : 'settings' }
@@ -128,7 +172,8 @@ CopilotSettings class >> copilotEnabled [
 CopilotSettings class >> copilotEnabled: aBoolean [
 	"Enable/disable Copilot globally."
 
-	enabled := aBoolean
+	enabled := aBoolean.
+	self autoSaveSettings
 ]
 
 { #category : 'accessing' }
@@ -143,6 +188,21 @@ CopilotSettings class >> copilotProvider: aSymbol [
 	"Set the provider symbol."
 
 	provider := aSymbol
+]
+
+{ #category : 'ollama' }
+CopilotSettings class >> customParameters [
+	"Answer the dictionary of custom Ollama parameters (user-extensible). Default: empty dictionary"
+
+	^ customParameters ifNil: [ customParameters := Dictionary new ]
+]
+
+{ #category : 'ollama' }
+CopilotSettings class >> customParameters: aDictionary [
+	"Set the dictionary of custom Ollama parameters."
+
+	customParameters := aDictionary ifNil: [ Dictionary new ].
+	self autoSaveSettings
 ]
 
 { #category : 'accessing' }
@@ -344,6 +404,13 @@ CopilotSettings class >> fimTemplateFromFile: aFileReference [
 	^ contents
 ]
 
+{ #category : 'ollama' }
+CopilotSettings class >> getCustomParameter: aKey [
+	"Get a single custom parameter, or nil if not set."
+
+	^ self customParameters at: aKey ifAbsent: [ nil ]
+]
+
 { #category : 'settings' }
 CopilotSettings class >> handleMissingOllamaForModelNamed: selectedModelName [
 
@@ -369,7 +436,8 @@ CopilotSettings class >> host: aString [
 	"Set the Ollama host and clear cached metadata."
 
 	host := aString.
-	self clearCachedModelMetadata
+	self clearCachedModelMetadata.
+	self autoSaveSettings
 ]
 
 { #category : 'accessing' }
@@ -464,6 +532,37 @@ CopilotSettings class >> isNullModelName: aString [
 	"Answer whether the given model name is the configured null model name."
 
 	^ aString = self nullModelFullName
+]
+
+{ #category : 'persistence' }
+CopilotSettings class >> loadSettingsFromFile [
+	"Load settings from the persistent STON file if it exists."
+
+	| fileRef stonString snapshot |
+	[
+		fileRef := self settingsFileReference.
+		(fileRef exists and: [ fileRef isFile ]) ifFalse: [ ^ self ].
+
+		fileRef readStreamDo: [ :stream |
+			stonString := stream contents
+		].
+
+		snapshot := STON fromString: stonString.
+		self restoreSettingsFromSerializableSnapshot: snapshot.
+
+		CoCopilotLogger
+			logBackEndEvent: 'Loaded settings from file'
+			details: (Dictionary new
+				at: #file put: fileRef pathString;
+				at: #settingsCount put: snapshot size;
+				yourself)
+	] on: Error do: [ :ex |
+		CoCopilotLogger
+			logError: 'Failed to load settings from file'
+			origin: #CopilotSettings
+			exception: ex
+			payload: Dictionary new
+	]
 ]
 
 { #category : 'private' }
@@ -720,7 +819,8 @@ CopilotSettings class >> modelName: aString [
 	"Set the model name and clear cached metadata."
 
 	modelName := aString.
-	self clearCachedModelMetadata
+	self clearCachedModelMetadata.
+	self autoSaveSettings
 ]
 
 { #category : 'private' }
@@ -832,6 +932,17 @@ CopilotSettings class >> normalizedDuration: anObject default: defaultValue mini
 	^ candidate min: maxValue
 ]
 
+{ #category : 'ollama' }
+CopilotSettings class >> normalizedFloat: anObject default: defaultValue minimum: minValue maximum: maxValue [
+	"Normalize a float value, enforcing a range."
+
+	| candidate |
+	anObject ifNil: [ ^ defaultValue ].
+	candidate := [ anObject asFloat ] on: Error do: [ defaultValue ].
+	candidate := candidate max: minValue.
+	^ candidate min: maxValue
+]
+
 { #category : 'settings' }
 CopilotSettings class >> notifyUser: aString [
 	"Display a message to the user (UIManager if available, otherwise Transcript)."
@@ -900,6 +1011,37 @@ CopilotSettings class >> nullModelMetadata [
 		at: #system put: 'Pharo Copilot is not configured. This null model intentionally produces no output until a real Ollama model is selected.';
 		at: #template put: 'No completion template is available because Pharo Copilot is not configured with an Ollama model.';
 		yourself
+]
+
+{ #category : 'ollama' }
+CopilotSettings class >> numCtx [
+	"Answer the num_ctx parameter for Ollama (context window size). Default: nil (use model default)"
+
+	^ numCtx
+]
+
+{ #category : 'ollama' }
+CopilotSettings class >> numCtx: anIntegerOrNil [
+	"Set the num_ctx parameter (512 to 32768, or nil for model default)."
+
+	anIntegerOrNil ifNil: [ numCtx := nil. self autoSaveSettings. ^ nil ].
+	numCtx := self normalizedDuration: anIntegerOrNil default: 2048 minimum: 512 maximum: 32768.
+	self autoSaveSettings
+]
+
+{ #category : 'ollama' }
+CopilotSettings class >> numPredict [
+	"Answer the num_predict parameter for Ollama (max tokens to generate). Default: 128"
+
+	^ numPredict ifNil: [ numPredict := 128 ]
+]
+
+{ #category : 'ollama' }
+CopilotSettings class >> numPredict: anInteger [
+	"Set the num_predict parameter (1 to 2048, default: 128)."
+
+	numPredict := self normalizedDuration: anInteger default: 128 minimum: 1 maximum: 2048.
+	self autoSaveSettings
 ]
 
 { #category : 'accessing' }
@@ -980,7 +1122,8 @@ CopilotSettings class >> port: aNumberOrString [
 		]
 		ifFalse: [ aNumberOrString ].
 
-	self clearCachedModelMetadata
+	self clearCachedModelMetadata.
+	self autoSaveSettings
 ]
 
 { #category : 'settings' }
@@ -1057,6 +1200,21 @@ CopilotSettings class >> removeMetadataTextFilesFrom: aDirectory [
 	] on: Error do: [ :ignored | ].
 ]
 
+{ #category : 'ollama' }
+CopilotSettings class >> repeatPenalty [
+	"Answer the repeat_penalty parameter for Ollama (penalizes repetition). Default: 1.1"
+
+	^ repeatPenalty ifNil: [ repeatPenalty := 1.1 ]
+]
+
+{ #category : 'ollama' }
+CopilotSettings class >> repeatPenalty: aNumber [
+	"Set the repeat_penalty parameter (0.0 to 2.0, default: 1.1)."
+
+	repeatPenalty := self normalizedFloat: aNumber default: 1.1 minimum: 0.0 maximum: 2.0.
+	self autoSaveSettings
+]
+
 { #category : 'settings' }
 CopilotSettings class >> requestTimeoutSeconds [
 	"Answer the HTTP request timeout (seconds) for Ollama calls."
@@ -1089,6 +1247,50 @@ CopilotSettings class >> resetToDefaultSettings [
 	completionIdleMilliseconds := nil.
 	requestTimeoutSeconds := nil.
 	modelInstallTimeoutSeconds := nil.
+temperature := nil.
+	topP := nil.
+	topK := nil.
+	numPredict := nil.
+	repeatPenalty := nil.
+	numCtx := nil.
+	seed := nil.
+	customParameters := nil.
+]
+
+{ #category : 'persistence' }
+CopilotSettings class >> restoreSettingsFromSerializableSnapshot: aDictionary [
+	"Restore settings from a serializable snapshot (handles path strings, etc.)."
+
+	| templatesPath |
+	enabled := aDictionary at: #enabled ifAbsent: [ nil ].
+	provider := aDictionary at: #provider ifAbsent: [ nil ].
+	modelName := aDictionary at: #modelName ifAbsent: [ nil ].
+	host := aDictionary at: #host ifAbsent: [ nil ].
+	port := aDictionary at: #port ifAbsent: [ nil ].
+	autoInstallModelScriptEnabled := aDictionary at: #autoInstallModelScriptEnabled ifAbsent: [ nil ].
+	loggingEnabled := aDictionary at: #loggingEnabled ifAbsent: [ nil ].
+	completionDebounceMilliseconds := aDictionary at: #completionDebounceMilliseconds ifAbsent: [ nil ].
+	completionIdleMilliseconds := aDictionary at: #completionIdleMilliseconds ifAbsent: [ nil ].
+	requestTimeoutSeconds := aDictionary at: #requestTimeoutSeconds ifAbsent: [ nil ].
+	modelInstallTimeoutSeconds := aDictionary at: #modelInstallTimeoutSeconds ifAbsent: [ nil ].
+	temperature := aDictionary at: #temperature ifAbsent: [ nil ].
+	topP := aDictionary at: #topP ifAbsent: [ nil ].
+	topK := aDictionary at: #topK ifAbsent: [ nil ].
+	numPredict := aDictionary at: #numPredict ifAbsent: [ nil ].
+	repeatPenalty := aDictionary at: #repeatPenalty ifAbsent: [ nil ].
+	numCtx := aDictionary at: #numCtx ifAbsent: [ nil ].
+	seed := aDictionary at: #seed ifAbsent: [ nil ].
+	customParameters := aDictionary at: #customParameters ifAbsent: [ Dictionary new ].
+
+	"Convert templatesDirectory path string back to FileReference"
+	templatesPath := aDictionary at: #templatesDirectory ifAbsent: [ nil ].
+	templatesPath ifNotNil: [
+		templatesDirectory := [ templatesPath asFileReference ] on: Error do: [ nil ]
+	].
+
+	"Don't restore modelMetadata and ollamaClientFactory - these are runtime-only"
+	modelMetadata := nil.
+	ollamaClientFactory := nil.
 ]
 
 { #category : 'accessing' }
@@ -1116,7 +1318,17 @@ CopilotSettings class >> restoreSettingsFromSnapshot: aDictionary [
 	requestTimeoutSeconds := aDictionary
 		                         at: #requestTimeoutSeconds
 		                         ifAbsent: [ aDictionary at: #RequestTimeoutSeconds ifAbsent: [ nil ] ].
-		modelInstallTimeoutSeconds := aDictionary at: #modelInstallTimeoutSeconds ifAbsent: [ aDictionary at: #ModelInstallTimeoutSeconds ifAbsent: [ nil ] ].
+	modelInstallTimeoutSeconds := aDictionary
+		                              at: #modelInstallTimeoutSeconds
+		                              ifAbsent: [ aDictionary at: #ModelInstallTimeoutSeconds ifAbsent: [ nil ] ].
+	temperature := aDictionary at: #temperature ifAbsent: [ nil ].
+	topP := aDictionary at: #topP ifAbsent: [ nil ].
+	topK := aDictionary at: #topK ifAbsent: [ nil ].
+	numPredict := aDictionary at: #numPredict ifAbsent: [ nil ].
+	repeatPenalty := aDictionary at: #repeatPenalty ifAbsent: [ nil ].
+	numCtx := aDictionary at: #numCtx ifAbsent: [ nil ].
+	seed := aDictionary at: #seed ifAbsent: [ nil ].
+	customParameters := aDictionary at: #customParameters ifAbsent: [ Dictionary new ].
 ]
 
 { #category : 'accessing' }
@@ -1148,11 +1360,113 @@ CopilotSettings class >> saveModelMetadataFilesFor: metadata [
 	self writeMetadata: metadata toDirectory: modelDirectory modelName: modelNameString
 ]
 
+{ #category : 'persistence' }
+CopilotSettings class >> saveSettingsToFile [
+	"Save current settings to the persistent STON file."
+
+	| fileRef snapshot stonString |
+	[
+		fileRef := self settingsFileReference.
+		snapshot := self serializableSettingsSnapshot.
+		stonString := STON toString: snapshot.
+
+		fileRef ensureCreateFile.
+		fileRef writeStreamDo: [ :stream |
+			stream truncate.
+			stream nextPutAll: stonString
+		].
+
+		CoCopilotLogger
+			logBackEndEvent: 'Saved settings to file'
+			details: (Dictionary new
+				at: #file put: fileRef pathString;
+				at: #settingsCount put: snapshot size;
+				yourself)
+	] on: Error do: [ :ex |
+		CoCopilotLogger
+			logError: 'Failed to save settings to file'
+			origin: #CopilotSettings
+			exception: ex
+			payload: Dictionary new
+	]
+]
+
+{ #category : 'ollama' }
+CopilotSettings class >> seed [
+	"Answer the seed parameter for Ollama (for reproducible generation). Default: nil (random)"
+
+	^ seed
+]
+
+{ #category : 'ollama' }
+CopilotSettings class >> seed: anIntegerOrNil [
+	"Set the seed parameter for reproducible generation (any integer, or nil for random)."
+
+	seed := anIntegerOrNil.
+	self autoSaveSettings
+]
+
+{ #category : 'persistence' }
+CopilotSettings class >> serializableSettingsSnapshot [
+	"Create a snapshot that can be serialized to STON (excludes closures and complex objects)."
+
+	| snapshot templatesPath |
+	snapshot := Dictionary new
+		at: #enabled put: enabled;
+		at: #provider put: provider;
+		at: #modelName put: modelName;
+		at: #host put: host;
+		at: #port put: port;
+		at: #autoInstallModelScriptEnabled put: autoInstallModelScriptEnabled;
+		at: #loggingEnabled put: loggingEnabled;
+		at: #completionDebounceMilliseconds put: completionDebounceMilliseconds;
+		at: #completionIdleMilliseconds put: completionIdleMilliseconds;
+		at: #requestTimeoutSeconds put: requestTimeoutSeconds;
+		at: #modelInstallTimeoutSeconds put: modelInstallTimeoutSeconds;
+		at: #temperature put: temperature;
+		at: #topP put: topP;
+		at: #topK put: topK;
+		at: #numPredict put: numPredict;
+		at: #repeatPenalty put: repeatPenalty;
+		at: #numCtx put: numCtx;
+		at: #seed put: seed;
+		at: #customParameters put: (customParameters ifNil: [ Dictionary new ]);
+		yourself.
+
+	"Convert templatesDirectory to a path string for serialization"
+	templatesDirectory ifNotNil: [
+		templatesPath := [ templatesDirectory pathString ] on: Error do: [ nil ].
+		templatesPath ifNotNil: [ snapshot at: #templatesDirectory put: templatesPath ]
+	].
+
+	^ snapshot
+
+]
+
+{ #category : 'ollama' }
+CopilotSettings class >> setCustomParameter: aKey value: aValue [
+	"Set a single custom parameter."
+
+	self customParameters at: aKey put: aValue.
+	self autoSaveSettings
+]
+
+{ #category : 'persistence' }
+CopilotSettings class >> settingsFileReference [
+	"Answer the file reference for the persistent settings file."
+
+	| logsDirectory |
+	logsDirectory := CoCopilotLogger ensureLogsDirectory.
+	^ logsDirectory / 'settings.ston'
+
+]
+
 { #category : 'ui' }
 CopilotSettings class >> settingsOn: aBuilder [
 	"Register Copilot settings in the system settings UI."
 
 	<systemsettings>
+	
 	(aBuilder setting: #CopilotSettings)
 		target: self;
 		parentName: #codeBrowsing;
@@ -1266,7 +1580,74 @@ CopilotSettings class >> settingsOn: aBuilder [
 					target: self;
 					getSelector: #port;
 					setSelector: #port:;
-					default: self port ]
+					default: self port.
+				(aBuilder group: #ollamaParameters)
+					order: 3;
+					label: 'Ollama Parameters';
+					description: 'Configure Ollama model parameters (temperature, top_p, etc.)';
+					with: [
+							(aBuilder setting: #temperature)
+								order: 1;
+								label: 'Temperature';
+								target: self;
+								getSelector: #temperature;
+								setSelector: #temperature:;
+								default: self temperature;
+								description: 'Controls randomness in generation (0.0 = deterministic, 2.0 = very random). Default: 0.8'.
+
+							(aBuilder setting: #topP)
+								order: 2;
+								label: 'Top P (nucleus sampling)';
+								target: self;
+								getSelector: #topP;
+								setSelector: #topP:;
+								default: self topP;
+								description: 'Nucleus sampling threshold (0.0 to 1.0). Default: 0.9'.
+
+							(aBuilder setting: #topK)
+								order: 3;
+								label: 'Top K';
+								target: self;
+								getSelector: #topK;
+								setSelector: #topK:;
+								default: self topK;
+								description: 'Limits token selection to top K candidates (1 to 100). Default: 40'.
+
+							(aBuilder setting: #numPredict)
+								order: 4;
+								label: 'Max tokens to generate';
+								target: self;
+								getSelector: #numPredict;
+								setSelector: #numPredict:;
+								default: self numPredict;
+								description: 'Maximum number of tokens to generate (1 to 2048). Default: 128'.
+
+							(aBuilder setting: #repeatPenalty)
+								order: 5;
+								label: 'Repeat penalty';
+								target: self;
+								getSelector: #repeatPenalty;
+								setSelector: #repeatPenalty:;
+								default: self repeatPenalty;
+								description: 'Penalizes repetition (0.0 to 2.0, higher = less repetition). Default: 1.1'.
+
+							(aBuilder setting: #numCtx)
+								order: 6;
+								label: 'Context window size';
+								target: self;
+								getSelector: #numCtx;
+								setSelector: #numCtx:;
+								default: self numCtx;
+								description: 'Context window size (512 to 32768, or leave empty for model default)'.
+
+							(aBuilder setting: #seed)
+								order: 7;
+								label: 'Seed (for reproducibility)';
+								target: self;
+								getSelector: #seed;
+								setSelector: #seed:;
+								default: self seed;
+								description: 'Random seed for reproducible generation (leave empty for random)' ] ]
 ]
 
 { #category : 'accessing' }
@@ -1287,7 +1668,15 @@ CopilotSettings class >> settingsSnapshot [
 		  at: #completionDebounceMilliseconds put: completionDebounceMilliseconds;
 		  at: #completionIdleMilliseconds put: completionIdleMilliseconds;
 		  at: #requestTimeoutSeconds put: requestTimeoutSeconds;
-		at: #modelInstallTimeoutSeconds put: modelInstallTimeoutSeconds;
+		  at: #modelInstallTimeoutSeconds put: modelInstallTimeoutSeconds;
+		  at: #temperature put: temperature;
+		  at: #topP put: topP;
+		  at: #topK put: topK;
+		  at: #numPredict put: numPredict;
+		  at: #repeatPenalty put: repeatPenalty;
+		  at: #numCtx put: numCtx;
+		  at: #seed put: seed;
+		  at: #customParameters put: customParameters;
 		  yourself
 ]
 
@@ -1352,6 +1741,21 @@ CopilotSettings class >> switchToNullModelDueToMissingOllamaFor: selectedModelNa
 	self notifyUser: 'Ollama is not available. Pharo Copilot will use the null model until you configure an Ollama model.'
 ]
 
+{ #category : 'ollama' }
+CopilotSettings class >> temperature [ 
+	"Answer the temperature parameter for Ollama (controls randomness). Default: 0.8"
+
+	^ temperature ifNil: [ temperature := 0.8 ]
+]
+
+{ #category : 'ollama' }
+CopilotSettings class >> temperature: aNumber [
+	"Set the temperature parameter (0.0 to 2.0, default: 0.8)."
+
+	temperature := self normalizedFloat: aNumber default: 0.8 minimum: 0.0 maximum: 2.0.
+	self autoSaveSettings
+]
+
 { #category : 'accessing' }
 CopilotSettings class >> templateFileForModelNamed: aModelName [
 	"Answer the per-model cached template file reference under the logs directory."
@@ -1381,6 +1785,36 @@ CopilotSettings class >> templatesDirectory: aFileReference [
 	"Set the directory containing bundled templates."
 
 	templatesDirectory := aFileReference asFileReference
+]
+
+{ #category : 'ollama' }
+CopilotSettings class >> topK [
+	"Answer the top_k parameter for Ollama (limits token selection). Default: 40"
+
+	^ topK ifNil: [ topK := 40 ]
+]
+
+{ #category : 'ollama' }
+CopilotSettings class >> topK: anInteger [
+	"Set the top_k parameter (1 to 100, default: 40)."
+
+	topK := self normalizedDuration: anInteger default: 40 minimum: 1 maximum: 100.
+	self autoSaveSettings
+]
+
+{ #category : 'ollama' }
+CopilotSettings class >> topP [
+	"Answer the top_p parameter for Ollama (nucleus sampling). Default: 0.9"
+
+	^ topP ifNil: [ topP := 0.9 ]
+]
+
+{ #category : 'ollama' }
+CopilotSettings class >> topP: aNumber [
+	"Set the top_p parameter (0.0 to 1.0, default: 0.9)."
+
+	topP := self normalizedFloat: aNumber default: 0.9 minimum: 0.0 maximum: 1.0.
+	self autoSaveSettings
 ]
 
 { #category : 'accessing' }

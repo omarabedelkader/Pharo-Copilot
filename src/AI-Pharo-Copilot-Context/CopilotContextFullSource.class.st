@@ -1,8 +1,8 @@
 Class {
 	#name : 'CopilotContextFullSource',
 	#superclass : 'Object',
-	#category : 'AI-Pharo-Copilot',
-	#package : 'AI-Pharo-Copilot'
+	#category : 'AI-Pharo-Copilot-Context',
+	#package : 'AI-Pharo-Copilot-Context'
 }
 
 { #category : 'hooks' }

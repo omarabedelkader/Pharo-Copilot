@@ -5,8 +5,8 @@ Class {
 		'targetClass',
 		'strategy'
 	],
-	#category : 'AI-Pharo-Copilot',
-	#package : 'AI-Pharo-Copilot'
+	#category : 'AI-Pharo-Copilot-Context',
+	#package : 'AI-Pharo-Copilot-Context'
 }
 
 { #category : 'instance creation' }

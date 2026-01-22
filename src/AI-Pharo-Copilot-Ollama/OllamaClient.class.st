@@ -193,17 +193,14 @@ OllamaClient >> initialize [
 	transport := OAHttpTransport new.
 	stream := false.
 	options := Dictionary new.
+	self loadOptionsFromSettings.
 	self useModelNamed: CopilotSettings modelName.
 
-	CoCopilotLogger
-		logBackEndEvent: 'Initialized Ollama client'
-		details: (Dictionary new
-			at: #transportClass put: transport class name;
-			at: #streamingEnabled put: stream;
-			at: #format put: format;
-			at: #modelFullName put: (modelSpec
-				ifNil: [ 'unassigned' ]
-				ifNotNil: [ modelSpec fullName ]);
+	CoCopilotLogger logBackEndEvent: 'Initialized Ollama client' details: (Dictionary new
+			 at: #transportClass put: transport class name;
+			 at: #streamingEnabled put: stream;
+			 at: #format put: format;
+			 at: #modelFullName put: (modelSpec ifNil: [ 'unassigned' ] ifNotNil: [ modelSpec fullName ]);			at: #optionsFromSettings put: options copy;
 			yourself).
 ]
 
@@ -235,6 +232,23 @@ OllamaClient >> listModels [
 			yourself).
 
 	^ response
+]
+
+{ #category : 'initialization' }
+OllamaClient >> loadOptionsFromSettings [
+	"Load Ollama options from CopilotSettings into the options dictionary."
+
+	| settingsOptions |
+	settingsOptions := CopilotSettings allOllamaOptions.
+	settingsOptions keysAndValuesDo: [ :key :value |
+		options at: key put: value
+	].
+
+	CoCopilotLogger
+		logBackEndEvent: 'Loaded Ollama options from settings'
+		details: (Dictionary new
+			at: #loadedOptions put: options copy;
+			yourself).
 ]
 
 { #category : 'response-normalization' }

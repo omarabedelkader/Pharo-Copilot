@@ -64,6 +64,8 @@ BaselineOfAIPharoCopilot >> baseline: spec [
 			spec package: 'AI-Pharo-Copilot' with: [ spec requires: #( 'AI-Pharo-Copilot-Ollama' ) ].
 			spec package: 'AI-Pharo-Copilot-Evaluator' with: [ spec requires: #( 'AI-Pharo-Copilot' ) ].
 			spec package: 'AI-Pharo-Copilot-Benchmarks' with: [ spec requires: #( 'AI-Pharo-Copilot-Ollama' ) ].
+		   spec package: 'AI-Pharo-Copilot-Context' with: [ spec requires: #( 'AI-Pharo-Copilot' ) ].
+			spec package: 'AI-Pharo-Copilot-Spec' with: [ spec requires: #( 'AI-Pharo-Copilot' ) ].
 			spec package: 'AI-Pharo-Copilot-Tests' with: [ spec requires: #( 'AI-Pharo-Copilot' ) ] ]
 ]
 
