@@ -10,7 +10,8 @@ Class {
 		'debounceToken',
 		'debounceMilliseconds',
 		'idleMilliseconds',
-		'classContextCache'
+		'classContextCache',
+		'menuMorph'
 	],
 	#category : 'AI-Pharo-Copilot',
 	#package : 'AI-Pharo-Copilot'
@@ -28,37 +29,37 @@ CoPharoCopilotResultSetBuilder class >> initializeOnContext: aSystemCompletionCo
 { #category : 'initialization' }
 CoPharoCopilotResultSetBuilder >> applyContent: contentString toContext: aContext expectedPrefix: expectedPrefix suffix: expectedSuffix contextInfo: contextInfo [
 	"Never delete user-typed text. Prefer INSERT at caret; fallback to safe append."
-
-	| snapshot currentPrefix currentSuffix source pos inserted |
+	"Instead of directly inserting, show a menu with the suggestion for the user to select."
+ 
+	| snapshot currentPrefix currentSuffix entry entries position |
 	contentString isEmpty ifTrue: [ ^ self ].
 	aContext ifNil: [ ^ self ].
-
+ 
 	snapshot := self contextSnapshotFor: aContext.
 	currentPrefix := snapshot at: #prefix.
 	currentSuffix := snapshot at: #suffix.
-
+ 
 	((currentPrefix = expectedPrefix) and: [ currentSuffix = expectedSuffix ]) ifFalse: [ ^ self ].
-
-	"1) Best case: insert at caret (Copilot-like behavior: user's text stays)."
-	inserted := false.
+ 
+	"Create an entry for this suggestion"
+	entry := CoCopilotEntry contents: contentString.
+	entries := { entry }.
+ 
+	"Get the cursor position for the menu"
+	position := self menuPositionFor: aContext.
+ 
+	"Show the menu on the UI thread"
 	self deferUI: [
-		inserted := self insertAtCaretIfPossibleIn: aContext text: contentString
-	].
-
-	inserted ifTrue: [ ^ self ].
-
-	"2) Fallback: append without rewriting what user already typed (safe)."
-	source := [ aContext source ifNil: [ '' ] ] on: Error do: [ '' ].
-	pos := [ aContext position ifNil: [ 0 ] ] on: Error do: [ 0 ].
-	pos := (pos max: 0) min: source size.
-
-	"Only do fallback when cursor is NOT inside a word (avoid corrupting)."
-	(pos < source size and: [ (self isWordChar: (source at: pos)) and: [ self isWordChar: (source at: pos + 1) ] ])
-		ifTrue: [ ^ self ].
-
-	self deferUI: [
-		aContext replaceTokenInEditorWith: (contentString "replace token only when we cannot insert")
-	]
+		self closeMenu.
+		menuMorph := CopilotMenuMorph
+			builder: self
+			context: aContext
+			entries: entries
+			position: position.
+ 
+		"Take keyboard focus"
+		menuMorph takeKeyboardFocus
+		]
 ]
 
 { #category : 'API - building' }
@@ -231,6 +232,16 @@ CoPharoCopilotResultSetBuilder >> cleanedContentFrom: aString [
 		ifFalse: [ text copyFrom: 1 to: delimiterIndex - 1 ].
 
 	^ body trimBoth
+]
+
+{ #category : 'initialization' }
+CoPharoCopilotResultSetBuilder >> closeMenu [
+	"Close the menu if it's open."
+
+	menuMorph ifNotNil: [
+		menuMorph isClosed ifFalse: [ menuMorph delete ].
+		menuMorph := nil
+	]
 ]
 
 { #category : 'private' }
@@ -460,6 +471,32 @@ CoPharoCopilotResultSetBuilder >> isWordChar: ch [
 ]
 
 { #category : 'initialization' }
+CoPharoCopilotResultSetBuilder >> menuClosed [
+	"Called when the menu is closed externally."
+
+	menuMorph := nil
+]
+
+{ #category : 'initialization' }
+CoPharoCopilotResultSetBuilder >> menuPositionFor: aContext [
+	"Calculate the position where the menu should appear, near the cursor."
+
+	| editor morph cursorRect |
+	[ editor := aContext editor ] on: Error do: [ ^ 0 @ 0 ].
+	editor ifNil: [ ^ 0 @ 0 ].
+
+	[ morph := editor morph ] on: Error do: [ ^ 0 @ 0 ].
+	morph ifNil: [ ^ 0 @ 0 ].
+
+	"Try to get cursor rectangle"
+	cursorRect := [ editor selectionPosition: '' ] on: Error do: [ nil ].
+	cursorRect ifNotNil: [ ^ cursorRect bottomLeft ].
+
+	"Fallback: use morph position"
+	^ morph boundsInWorld bottomLeft
+]
+
+{ #category : 'initialization' }
 CoPharoCopilotResultSetBuilder >> methodSourcesFor: aBehavior [
 	"Collect and concatenate the source of all methods of the given behavior (sorted), ignoring failures."
 
@@ -541,8 +578,7 @@ CoPharoCopilotResultSetBuilder >> processCompletionFor: aContext prefix: prefixS
 		contextInfo
 			at: #classContextLength put: classContext size;
 			at: #classContextPresent put: classContext isEmpty not.
-			
-		self haltOnce.
+		
 
 		rawResponse := client generateForPrefix: prefixString suffix: suffixString context: classContext.
 

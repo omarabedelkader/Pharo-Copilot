@@ -120,7 +120,6 @@ OllamaClient >> generate: aPromptString [
 	format ifNotNil: [ payload at: #format put: format ].
 	(options notNil and: [ options isEmpty not ]) ifTrue: [ payload at: #options put: options ].
 
-	self haltOnce.
 	CoCopilotLogger logBackEndEvent: 'Dispatching generate request' details: (Dictionary new
 			 at: #endpoint put: 'api/generate';
 			 at: #modelFullName put: modelSpec fullName;

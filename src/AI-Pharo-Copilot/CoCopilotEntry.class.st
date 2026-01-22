@@ -21,10 +21,27 @@ CoCopilotEntry class >> contents: aString [
 		yourself
 ]
 
-{ #category : 'accessing' }
+{ #category : 'actions' }
 CoCopilotEntry >> activateOn: aCoCompletionContext [
-	"Apply this suggestion by replacing the current token in the editor."
+	"Apply this suggestion by inserting it at the cursor position."
 
+	| editor |
+	[ editor := aCoCompletionContext editor ] on: Error do: [ ^ self ].
+	editor ifNil: [ ^ self ].
+
+	"Try to insert at caret (preserves user's text)"
+	(editor respondsTo: #addString:) ifTrue: [
+		^ editor addString: self contents
+	].
+
+	"Fallback: replace selection if empty"
+	(editor respondsTo: #selectionInterval) ifTrue: [
+		editor selectionInterval isEmpty ifTrue: [
+			^ editor replaceSelectionWith: self contents
+		]
+	].
+
+	"Last resort: use context's replace method"
 	aCoCompletionContext replaceTokenInEditorWith: self contents
 ]
 
