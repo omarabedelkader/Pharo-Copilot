@@ -14,6 +14,24 @@ Class {
 }
 
 { #category : 'accessing' }
+CopilotTestableBuilder >> applyContent: contentString toContext: aContext expectedPrefix: expectedPrefix suffix: expectedSuffix contextInfo: contextInfo [
+	"Apply suggestions directly in tests without showing menus."
+
+	| snapshot currentPrefix currentSuffix entry |
+	contentString isEmpty ifTrue: [ ^ self ].
+	aContext ifNil: [ ^ self ].
+
+	snapshot := self contextSnapshotFor: aContext.
+	currentPrefix := snapshot at: #prefix.
+	currentSuffix := snapshot at: #suffix.
+
+	((currentPrefix = expectedPrefix) and: [ currentSuffix = expectedSuffix ]) ifFalse: [ ^ self ].
+
+	entry := CoCopilotEntry contents: contentString.
+	entry activateOn: aContext
+]
+
+{ #category : 'accessing' }
 CopilotTestableBuilder >> completionContext [
 	^ testContext
 ]
