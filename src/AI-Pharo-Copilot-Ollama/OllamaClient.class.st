@@ -120,7 +120,6 @@ OllamaClient >> generate: aPromptString [
 	format ifNotNil: [ payload at: #format put: format ].
 	(options notNil and: [ options isEmpty not ]) ifTrue: [ payload at: #options put: options ].
 
-	self haltOnce.
 	CoCopilotLogger logBackEndEvent: 'Dispatching generate request' details: (Dictionary new
 			 at: #endpoint put: 'api/generate';
 			 at: #modelFullName put: modelSpec fullName;
@@ -194,6 +193,7 @@ OllamaClient >> initialize [
 	transport := OAHttpTransport new.
 	stream := false.
 	options := Dictionary new.
+	self loadOptionsFromSettings.
 	self useModelNamed: CopilotSettings modelName.
 
 	CoCopilotLogger
@@ -205,6 +205,24 @@ OllamaClient >> initialize [
 			at: #modelFullName put: (modelSpec
 				ifNil: [ 'unassigned' ]
 				ifNotNil: [ modelSpec fullName ]);
+			at: #optionsFromSettings put: options copy;
+			yourself).
+]
+
+{ #category : 'initialization' }
+OllamaClient >> loadOptionsFromSettings [
+	"Load Ollama options from CopilotSettings into the options dictionary."
+
+	| settingsOptions |
+	settingsOptions := CopilotSettings allOllamaOptions.
+	settingsOptions keysAndValuesDo: [ :key :value |
+		options at: key put: value
+	].
+
+	CoCopilotLogger
+		logBackEndEvent: 'Loaded Ollama options from settings'
+		details: (Dictionary new
+			at: #loadedOptions put: options copy;
 			yourself).
 ]
 
