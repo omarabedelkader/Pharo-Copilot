@@ -232,8 +232,10 @@ OllamaClientTest >> testOptionAtReturnsNil [
 OllamaClientTest >> testOptionsDefaultEmpty [
 
     | client |
-    client := OllamaClient new.
-    self assert: client options isEmpty.
+    CopilotSettings withDefaultSettingsDo: [
+        client := OllamaClient new.
+        self assert: client options isEmpty
+    ].
 ]
 
 { #category : 'tests' }
