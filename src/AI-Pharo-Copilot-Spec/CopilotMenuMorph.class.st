@@ -19,7 +19,8 @@ Class {
 { #category : 'accessing' }
 CopilotMenuMorph class >> backgroundColor [ 
 
-	^ Color white
+	^ Color r: 0.95 g: 0.95 b: 0.97 "Soft light blue-gray background"
+
 ]
 
 { #category : 'accessing' }
@@ -54,7 +55,7 @@ CopilotMenuMorph class >> maxVisibleItems [
 { #category : 'accessing' }
 CopilotMenuMorph class >> scrollColor [
 
-	^ Color blue alpha: 0.3
+	^ Color r: 0.4 g: 0.6 b: 0.9 alpha: 0.2 "Softer blue highlight with less opacity"
 ]
 
 { #category : 'private' }
@@ -472,6 +473,7 @@ CopilotMenuMorph >> showDetail [
 	self itemsCount isZero ifTrue: [ ^ self ].
 
 	detailMorph := CopilotDetailMorph new.
+	isDetailMorphVisible := false.
 	self updateDetail
 ]
 
@@ -483,14 +485,14 @@ CopilotMenuMorph >> takesKeyboardFocus [
 
 { #category : 'private' }
 CopilotMenuMorph >> updateDetail [
+
 	detailMorph ifNil: [ ^ self ].
 	detailPosition ifNil: [ ^ self ].
-
 	detailMorph
 		entryText: self selectedEntry contents;
 		position: detailPosition menuWidth: self width.
-
 	isDetailMorphVisible ifTrue: [ ^ self ].
 	self addMorph: detailMorph.
-	isDetailMorphVisible := true
+	isDetailMorphVisible := true.
+	detailMorph openInWorld
 ]

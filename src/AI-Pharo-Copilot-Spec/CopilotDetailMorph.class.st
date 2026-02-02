@@ -40,10 +40,10 @@ CopilotDetailMorph >> contentBounds [
 	^ rectangle
 ]
 
-{ #category : 'geometry' }
+{ #category : 'accessing - defaults' }
 CopilotDetailMorph >> defaultColor [
 
-	^ Color white
+	^ Color r: 0.96 g: 0.96 b: 0.98 "Soft light gray-blue background matching menu"
 ]
 
 { #category : 'geometry' }
@@ -59,7 +59,7 @@ CopilotDetailMorph >> drawArrowOn: aCanvas [
 	polygon add: (point translateBy: size @ 0).
 	polygon add: (point translateBy: size @ (size // 2)).
 	polygon add: (point translateBy: 0 @ size).
-	aCanvas drawPolygon: polygon fillStyle: (Color blue alpha: 0.3)
+	aCanvas drawPolygon: polygon fillStyle: (Color r: 0.4 g: 0.6 b: 0.9 alpha: 0.25)
 ]
 
 { #category : 'geometry' }
