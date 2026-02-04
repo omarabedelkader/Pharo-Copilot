@@ -13,14 +13,26 @@ Pharo-Copilot is an AI-powered code completion engine for Pharo, designed to enh
 
 Ensure you have **Pharo** installed on your system as well as **[Ollama](https://ollama.com/)** for the underlying AI model hosting.
 
-To install development version of `Pharo-Copilot` in your image you can use:
+
+To install stable version of `pharo-copilot` in your image you can use:
 
 ```smalltalk
 Metacello new
-  githubUser: 'omarabedelkader' project: 'Pharo-Copilot' commitish: 'main' path: 'src';
+  githubUser: 'omarabedelkader' project: 'pharo-copilot' commitish: 'X.X.X' path: 'src';
   baseline: 'AIPharoCopilot';
   load
 ```
+
+
+To install development version of `pharo-copilot` in your image you can use:
+
+```smalltalk
+Metacello new
+  githubUser: 'omarabedelkader' project: 'pharo-copilot' commitish: 'main' path: 'src';
+  baseline: 'AIPharoCopilot';
+  load.
+```
+
 Make sure you are connected to the internet before loading, as the engine may require online requests for AI completions.
 
 ## Usage
